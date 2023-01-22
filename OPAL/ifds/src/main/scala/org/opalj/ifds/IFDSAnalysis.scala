@@ -15,7 +15,7 @@ import scala.collection.{mutable, Set => SomeSet}
  *
  * @param fact the actual flow fact.
  * @param isUnbalancedReturn whether this fact was created by an unbalanced return.
- * @param index if unbalanced return, the call statement in the caller.
+ * @param callStmt if unbalanced return, the call statement in the caller.
  * @param callChain if unbalanced return, the current call chain.
  */
 class IFDSFact[Fact <: AbstractIFDSFact, S <: Statement[_, _]](val fact: Fact, val isUnbalancedReturn: Boolean, val callStmt: Option[S], val callChain: Option[Seq[Callable]]) {

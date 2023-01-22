@@ -38,7 +38,7 @@ class BackwardTaintProblemFixture(p: SomeProject) extends JavaBackwardTaintProbl
     override protected def sanitizesReturnValue(callee: Method): Boolean = callee.name == "sanitize"
 
     /**
-     * We do not sanitize paramters.
+     * We do not sanitize parameters.
      */
     override protected def sanitizesParameter(call: JavaStatement, in: TaintFact): Boolean = false
 

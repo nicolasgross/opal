@@ -4,7 +4,7 @@ package value
 
 import org.bytedeco.llvm.LLVM.{LLVMUseRef, LLVMValueRef}
 import org.bytedeco.llvm.global.LLVM._
-import org.opalj.ll.llvm.value.constant.{ConstantDataArray, ConstantDataVector, ConstantExpression, ConstantIntValue}
+import org.opalj.ll.llvm.value.constant.{ConstantDataArray, ConstantDataVector, ConstantExpression, ConstantIntValue, ConstantPointerNullValue, UndefValue}
 
 class Value(ref: LLVMValueRef) {
     def repr: String = {
@@ -37,33 +37,33 @@ object Value {
         if (ref == null) return None
         if (ref.isNull) return None
         Some(LLVMGetValueKind(ref) match {
-            case LLVMArgumentValueKind           => Argument(ref)
-            case LLVMBasicBlockValueKind         => BasicBlock(LLVMValueAsBasicBlock(ref))
+            case LLVMArgumentValueKind            => Argument(ref)
+            case LLVMBasicBlockValueKind          => BasicBlock(LLVMValueAsBasicBlock(ref))
             //LLVMMemoryUseValueKind
             //LLVMMemoryDefValueKind
             //LLVMMemoryPhiValueKind
-            case LLVMFunctionValueKind           => Function(ref)
-            //LLVMGlobalAliasValueKind
+            case LLVMFunctionValueKind            => Function(ref)
+            //case LLVMGlobalAliasValueKind
             //LLVMGlobalIFuncValueKind
-            case LLVMGlobalVariableValueKind     => GlobalVariable(ref)
+            case LLVMGlobalVariableValueKind      => GlobalVariable(ref)
             //LLVMBlockAddressValueKind
-            case LLVMConstantExprValueKind       => ConstantExpression(ref)
+            case LLVMConstantExprValueKind        => ConstantExpression(ref)
             //LLVMConstantArrayValueKind
             //LLVMConstantStructValueKind
             //LLVMConstantVectorValueKind
-            //LLVMUndefValueValueKind
+            case LLVMUndefValueValueKind          => UndefValue(ref)
             //LLVMConstantAggregateZeroValueKind
-            case LLVMConstantDataArrayValueKind  => ConstantDataArray(ref)
-            case LLVMConstantDataVectorValueKind => ConstantDataVector(ref)
-            case LLVMConstantIntValueKind        => ConstantIntValue(ref)
+            case LLVMConstantDataArrayValueKind   => ConstantDataArray(ref)
+            case LLVMConstantDataVectorValueKind  => ConstantDataVector(ref)
+            case LLVMConstantIntValueKind         => ConstantIntValue(ref)
             //LLVMConstantFPValueKind
-            //LLVMConstantPointerNullValueKind
+            case LLVMConstantPointerNullValueKind => ConstantPointerNullValue(ref)
             //LLVMConstantTokenNoneValueKind
             //LLVMMetadataAsValueValueKind
             //LLVMInlineAsmValueKind
-            case LLVMInstructionValueKind        => Instruction(ref)
+            case LLVMInstructionValueKind         => Instruction(ref)
             //LLVMPoisonValueValueKind
-            case valueKind                       => throw new IllegalArgumentException("unknown valueKind: "+valueKind)
+            case valueKind                        => throw new IllegalArgumentException("unknown valueKind: "+valueKind)
         })
     }
 }

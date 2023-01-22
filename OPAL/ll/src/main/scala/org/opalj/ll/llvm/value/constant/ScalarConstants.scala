@@ -10,3 +10,6 @@ case class ConstantIntValue(ref: LLVMValueRef) extends User(ref) {
     def zeroExtendedValue: Long = LLVMConstIntGetZExtValue(ref)
     def signExtendedValue: Long = LLVMConstIntGetSExtValue(ref)
 }
+case class ConstantPointerNullValue(ref: LLVMValueRef) extends User(ref)
+
+case class UndefValue(ref: LLVMValueRef) extends User(ref)
