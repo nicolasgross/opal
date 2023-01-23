@@ -5,7 +5,8 @@ import org.opalj.br.Method
 import org.opalj.br.analyses.SomeProject
 import org.opalj.ifds.Callable
 import org.opalj.ll.fpcf.analyses.ifds.{JNIMethod, LLVMFunction, LLVMStatement, NativeForwardIFDSProblem, NativeFunction}
-import org.opalj.ll.llvm.value.{Add, Alloca, BitCast, Call, GetElementPtr, Load, PHI, Ret, Store, Sub}
+import org.opalj.ll.llvm.PointerType
+import org.opalj.ll.llvm.value.{Alloca, Argument, BinaryOperation, Call, ConversionOperation, GetElementPtr, Load, PHI, Ret, Store}
 import org.opalj.tac.fpcf.analyses.ifds.{JavaForwardICFG, JavaIFDSProblem, JavaStatement}
 import org.opalj.tac.fpcf.analyses.ifds.taint.{TaintFact, TaintProblem}
 import org.opalj.tac.fpcf.analyses.ifds.taint.FlowFact
@@ -36,36 +37,32 @@ abstract class NativeForwardTaintProblem(project: SomeProject)
         case _: Alloca => Set(in)
         case store: Store => in match {
             case NativeVariable(value) if value == store.src => store.dst match {
-                case dst: Alloca                          => Set(in, NativeVariable(dst))
                 case gep: GetElementPtr if gep.isConstant => Set(in, NativeArrayElement(gep.base, gep.constants))
+                case gep: GetElementPtr if !gep.isConstant => Set(in, NativeVariable(gep.base))
+                case _ => Set(in, NativeVariable(store.dst))
             }
-            case NativeArrayElement(base, indices) if store.src == base => Set(in, NativeArrayElement(store.dst, indices))
             case NativeVariable(value) if value == store.dst => Set()
+            case NativeArrayElement(_, indices) => store.dst match {
+                case gep: GetElementPtr if gep.isConstant && gep.constants == indices => Set()
+                case _ => Set(in)
+            }
             case _ => Set(in)
         }
         case load: Load => in match {
             case NativeVariable(value) if value == load.src => Set(in, NativeVariable(load))
-            case NativeArrayElement(base, indices) => load.src match {
-                case gep: GetElementPtr if gep.isConstant && gep.base == base && gep.constants == indices => Set(in, NativeVariable(load))
-                case _ => Set(in, NativeArrayElement(load, indices))
-            }
-            case _ => Set(in)
-        }
-        case add: Add => in match {
-            case NativeVariable(value) if value == add.op1 || value == add.op2 => Set(in, NativeVariable(add))
-            case _ => Set(in)
-        }
-        case sub: Sub => in match {
-            case NativeVariable(value) if value == sub.op1 || value == sub.op2 => Set(in, NativeVariable(sub))
             case _ => Set(in)
         }
         case gep: GetElementPtr => in match {
             case NativeVariable(value) if value == gep.base => Set(in, NativeVariable(gep))
-            case NativeArrayElement(base, indices) if base == gep.base && gep.isZero => Set(in, NativeArrayElement(gep, indices))
+            case NativeArrayElement(base, indices) if gep.base == base && ((gep.isConstant && gep.constants == indices) || !gep.isConstant) => Set(in, NativeVariable(gep))
             case _ => Set(in)
         }
-        case bitcast: BitCast => in match {
-            case NativeVariable(value) if value == bitcast.operand(0) => Set(in, NativeVariable(bitcast))
+        case binOp: BinaryOperation => in match {
+            case NativeVariable(value) if value == binOp.op1 || value == binOp.op2 => Set(in, NativeVariable(binOp))
+            case _ => Set(in)
+        }
+        case convOp: ConversionOperation => in match {
+            case NativeVariable(value) if value == convOp.operand(0) => Set(in, NativeVariable(convOp))
             case _ => Set(in)
         }
         case _ => Set(in)
@@ -112,17 +109,41 @@ abstract class NativeForwardTaintProblem(project: SomeProject)
     override def returnFlow(exit: LLVMStatement, in: NativeTaintFact, call: LLVMStatement, successor: Option[LLVMStatement],
                             unbCallChain: Seq[Callable]): Set[NativeTaintFact] = {
         val callee = exit.callable
-        var flows: Set[NativeTaintFact] = if (sanitizesReturnValue(callee)) Set.empty else in match {
-            case NativeVariable(value) => exit.instruction match {
-                case ret: Ret if ret.value.contains(value) => Set(NativeVariable(call.instruction))
-                case _: Ret                                => Set()
-                case _                                     => Set()
+        if (sanitizesReturnValue(callee)) return Set.empty
+        val callInstr = call.instruction.asInstanceOf[Call]
+
+        var flows: Set[NativeTaintFact] = in match {
+            // check for tainted pass-by-reference parameters (pointer)
+            case NativeVariable(value) => value match {
+                case Argument(_, index) => value.typ match {
+                    case PointerType(_) => Set(NativeVariable(callInstr.argument(index).get))
+                    case _ => Set()
+                }
+                case _ => Set()
+            }
+            case NativeArrayElement(base, indices) => base match {
+                case Argument(_, index) => base.typ match {
+                    case PointerType(_) => Set(NativeArrayElement(callInstr.argument(index).get, indices))
+                    case _ => Set()
+                }
+                case _ => Set()
             }
             case NativeTaintNullFact => Set(NativeTaintNullFact)
             case NativeFlowFact(flow) if !flow.contains(call.function) =>
                 Set(NativeFlowFact(call.function +: flow))
             case _ => Set()
         }
+
+        // taint return value in caller if tainted in callee
+        exit.instruction match {
+            case ret: Ret if ret.value.isDefined => in match {
+                case NativeVariable(value) if ret.value.contains(value) => flows += NativeVariable(call.instruction)
+                case NativeArrayElement(base, indices) if ret.value.contains(base) => flows += NativeArrayElement(call.instruction, indices)
+                case _ =>
+            }
+            case _ =>
+        }
+
         if (exit.callable.name == "source") in match {
             case NativeTaintNullFact => flows += NativeVariable(call.instruction)
         }

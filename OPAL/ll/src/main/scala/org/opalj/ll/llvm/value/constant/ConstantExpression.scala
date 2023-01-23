@@ -50,9 +50,9 @@ object ConstantExpression {
             // case LLVMSIToFP         => SIToFPConst(ref)
             // case LLVMFPTrunc        => FPTruncConst(ref)
             // case LLVMFPExt          => FPExtConst(ref)
-            // case LLVMPtrToInt       => PtrToIntConst(ref)
+            case LLVMPtrToInt       => PtrToIntConst(ref)
             // case LLVMIntToPtr       => IntToPtrConst(ref)
-            // case LLVMBitCast        => BitCastConst(ref)
+            case LLVMBitCast        => BitCastConst(ref)
             // case LLVMAddrSpaceCast  => AddrSpaceCastConst(ref)
             // case LLVMICmp           => ICmpConst(ref)
             // case LLVMFCmp           => FCmpConst(ref)
@@ -83,7 +83,12 @@ object ConstantExpression {
     }
 }
 
-sealed abstract class ConstantExpression(ref: LLVMValueRef) extends User(ref)
+sealed abstract class ConstantExpression(ref: LLVMValueRef) extends User(ref) {
+    def base: Value = operand(0)
+    def isConstant = (1 until numOperands).forall(operand(_).isInstanceOf[ConstantIntValue])
+    def constants = (1 until numOperands).map(operand(_).asInstanceOf[ConstantIntValue].signExtendedValue)
+    def isZero = isConstant && constants.forall(_ == 0)
+}
 
 // // case class RetConst(ref: LLVMValueRef) extends ConstantExpression(ref)
 // case class BrConst(ref: LLVMValueRef) extends ConstantExpression(ref)
@@ -114,12 +119,7 @@ sealed abstract class ConstantExpression(ref: LLVMValueRef) extends User(ref)
 // case class AllocaConst(ref: LLVMValueRef) extends ConstantExpression(ref)
 // case class LoadConst(ref: LLVMValueRef) extends ConstantExpression(ref)
 // case class StoreConst(ref: LLVMValueRef) extends ConstantExpression(ref)
-case class GetElementPtrConst(ref: LLVMValueRef) extends ConstantExpression(ref) {
-    def base: Value = operand(0)
-    def isConstant = (1 until numOperands).forall(operand(_).isInstanceOf[ConstantIntValue])
-    def constants = (1 until numOperands).map(operand(_).asInstanceOf[ConstantIntValue].signExtendedValue)
-    def isZero = isConstant && constants.forall(_ == 0)
-}
+case class GetElementPtrConst(ref: LLVMValueRef) extends ConstantExpression(ref)
 // case class TruncConst(ref: LLVMValueRef) extends ConstantExpression(ref)
 // case class ZExtConst(ref: LLVMValueRef) extends ConstantExpression(ref)
 // case class SExtConst(ref: LLVMValueRef) extends ConstantExpression(ref)
@@ -129,9 +129,9 @@ case class GetElementPtrConst(ref: LLVMValueRef) extends ConstantExpression(ref)
 // case class SIToFPConst(ref: LLVMValueRef) extends ConstantExpression(ref)
 // case class FPTruncConst(ref: LLVMValueRef) extends ConstantExpression(ref)
 // case class FPExtConst(ref: LLVMValueRef) extends ConstantExpression(ref)
-// case class PtrToIntConst(ref: LLVMValueRef) extends ConstantExpression(ref)
+case class PtrToIntConst(ref: LLVMValueRef) extends ConstantExpression(ref)
 // case class IntToPtrConst(ref: LLVMValueRef) extends ConstantExpression(ref)
-// case class BitCastConst(ref: LLVMValueRef) extends ConstantExpression(ref)
+case class BitCastConst(ref: LLVMValueRef) extends ConstantExpression(ref)
 // case class AddrSpaceCastConst(ref: LLVMValueRef) extends ConstantExpression(ref)
 // case class ICmpConst(ref: LLVMValueRef) extends ConstantExpression(ref)
 // case class FCmpConst(ref: LLVMValueRef) extends ConstantExpression(ref)
