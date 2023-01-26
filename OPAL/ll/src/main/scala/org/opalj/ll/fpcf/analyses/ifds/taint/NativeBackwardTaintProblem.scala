@@ -60,7 +60,7 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
                 if (gep.isConstant) Set(in, NativeArrayElement(gep.base, gep.constants))
                 else Set(in, NativeVariable(gep.base))
             case NativeArrayElement(base, indices) if base == gep =>
-                if (gep.isConstant) Set(in, NativeArrayElement(gep.base, gep.constants)) // not nested array taints, taint whole subarray
+                if (gep.isConstant) Set(in, NativeArrayElement(gep.base, gep.constants)) // no nested array taints, taint whole subarray
                 else Set(in, NativeVariable(gep.base))
             case _ => Set(in)
         }

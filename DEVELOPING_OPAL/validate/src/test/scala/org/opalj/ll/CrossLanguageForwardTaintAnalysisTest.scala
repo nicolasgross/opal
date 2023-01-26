@@ -29,6 +29,8 @@ class CrossLanguageForwardTaintAnalysisTest extends AnyFunSpec with Matchers {
 
         project.updateProjectInformationKeyInitializationData(LLVMProjectKey)(
             current => List("./DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/TaintTest.ll")
+            //current => List("./DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/lifted_mcsema.ll")
+            //current => List("./DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/lifted_retdec.ll")
         )
         project.get(LLVMProjectKey)
         project.get(RTACallGraphKey)
