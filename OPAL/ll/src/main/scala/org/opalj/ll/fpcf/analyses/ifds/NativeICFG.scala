@@ -3,7 +3,7 @@ package org.opalj.ll.fpcf.analyses.ifds
 
 import org.opalj.br.analyses.{DeclaredMethodsKey, SomeProject}
 import org.opalj.ifds.ICFG
-import org.opalj.ll.fpcf.analyses.cg.SimpleNativeCallGraphKey
+import org.opalj.ll.fpcf.analyses.cg.{LazyJNICallDetectionKey, SimpleNativeCallGraphKey}
 import org.opalj.ll.llvm.value.{Call, Function}
 
 abstract class NativeICFG(project: SomeProject) extends ICFG[NativeFunction, LLVMStatement] {
@@ -16,17 +16,25 @@ abstract class NativeICFG(project: SomeProject) extends ICFG[NativeFunction, LLV
      * @return All callables possibly called at the statement or None, if the statement does not
      *         contain a call.
      */
-    override def getCalleesIfCallStatement(statement: LLVMStatement): Option[collection.Set[_ <: NativeFunction]] = {
+    override def getCalleesIfCallStatement(statement: LLVMStatement): Option[Set[_ <: NativeFunction]] = {
         statement.instruction match {
-            case call: Call => Some(resolveCallee(call))
+            case call: Call => resolveCallee(call) match {
+                case Some(method) => Some(Set(method))
+                case None => None
+            }
             case _          => None
         }
     }
 
-    def resolveCallee(call: Call): Set[_ <: NativeFunction] = call.calledValue match {
-        case function: Function               => Set(LLVMFunction(function))
-        case _ if JNICallUtil.isJNICall(call) => JNICallUtil.resolve(call)
-        case _                                => Set()
+    def resolveCallee(call: Call): Option[_ <: NativeFunction] = {
+        val jniCallDetection = project.get(LazyJNICallDetectionKey)
+        call.calledValue match {
+            case function: Function => Some(LLVMFunction(function))
+            case _ => jniCallDetection(call) match {
+                case Some(method) => Some(JNIMethod(method))
+                case None => None
+            }
+        }
     }
 
     override def getCallers(callee: NativeFunction): Set[LLVMStatement] =

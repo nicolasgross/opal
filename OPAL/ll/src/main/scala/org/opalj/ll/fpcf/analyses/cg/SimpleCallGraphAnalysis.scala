@@ -4,7 +4,7 @@ package org.opalj.ll.fpcf.analyses.cg
 import org.opalj.br.analyses.{DeclaredMethods, DeclaredMethodsKey, ProjectInformationKeys, SomeProject}
 import org.opalj.br.fpcf.{BasicFPCFLazyAnalysisScheduler, FPCFAnalysis, FPCFAnalysisScheduler}
 import org.opalj.fpcf._
-import org.opalj.ll.fpcf.analyses.ifds.{JNICallUtil, LLVMFunction, NativeFunction}
+import org.opalj.ll.fpcf.analyses.ifds.{JNIMethod, LLVMFunction, NativeFunction}
 import org.opalj.ll.llvm.value.{Call, Function}
 
 sealed trait SimpleCallGraphPropertyMetaInformation extends PropertyMetaInformation {
@@ -44,21 +44,22 @@ class SimpleCallGraphAnalysis(val project: SomeProject) extends FPCFAnalysis {
     private def processFunction(function: Function): CallGraph = {
         val cg = scala.collection.mutable.Map.empty[NativeFunction, Set[Call]]
         val entryPoints = scala.collection.mutable.Set.empty[Function]
+        val jniCallDetection = project.get(LazyJNICallDetectionKey)
 
         // process calls in this function
         function.basicBlocks.flatMap(_.instructions).foreach {
             case c: Call => c.calledValue match {
-                case f: Function =>
+                case f: Function => // normal native function call
                     entryPoints.add(f)
                     val newCalls = cg.getOrElse(LLVMFunction(f), Set.empty) ++ Set(c)
                     cg.update(LLVMFunction(f), newCalls)
-                case _ if JNICallUtil.isJNICall(c) =>
-                    val jniCallees = JNICallUtil.resolve(c)
-                    for (jniCallee <- jniCallees) {
+                case _ => jniCallDetection(c) match {
+                    case Some(method) =>
+                        val jniCallee = JNIMethod(method)
                         val newCalls = cg.getOrElse(jniCallee, Set.empty) ++ Set(c)
                         cg.update(jniCallee, newCalls)
-                    }
-                case _ =>
+                    case None => None
+                }
             }
             case _ =>
         }
