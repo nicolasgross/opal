@@ -4,6 +4,7 @@ package org.opalj.ll.fpcf.analyses.ifds.taint
 import org.opalj.br.analyses.{ProjectInformationKeys, SomeProject}
 import org.opalj.fpcf.{PropertyBounds, PropertyKey, PropertyStore}
 import org.opalj.ifds.{Callable, IFDSFact, IFDSPropertyMetaInformation}
+import org.opalj.ll.LLVMProjectKey
 import org.opalj.ll.fpcf.analyses.cg.SimpleNativeCallGraphKey
 import org.opalj.ll.fpcf.analyses.ifds.{LLVMFunction, LLVMStatement, NativeFunction, NativeIFDSAnalysis, NativeIFDSAnalysisScheduler}
 import org.opalj.ll.fpcf.properties.NativeTaint
@@ -13,6 +14,7 @@ import org.opalj.tac.fpcf.properties.Taint
 class SimpleNativeBackwardTaintProblem(p: SomeProject) extends NativeBackwardTaintProblem(p) {
 
     override val javaPropertyKey: PropertyKey[Taint] = Taint.key
+    val llvmProject = p.get(LLVMProjectKey)
 
     /**
      * The analysis starts with the sink function.

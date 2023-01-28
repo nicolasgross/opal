@@ -7,10 +7,7 @@ import org.opalj.br.fpcf.PropertyStoreKey
 import org.opalj.fpcf.{EOptionP, FinalEP, InterimEUBP, Property, PropertyKey, PropertyStore}
 import org.opalj.ifds.Dependees.Getter
 import org.opalj.ifds.{AbstractIFDSFact, Callable, IFDSFact, IFDSProblem, IFDSProperty}
-import org.opalj.ll.LLVMProjectKey
-import org.opalj.tac.{DUVar, LazyDetachedTACAIKey, TACMethodParameter, TACode}
 import org.opalj.tac.fpcf.analyses.ifds.{JavaICFG, JavaStatement}
-import org.opalj.value.ValueInformation
 
 abstract class NativeForwardIFDSProblem[Fact <: AbstractIFDSFact, JavaFact <: AbstractIFDSFact](project: SomeProject)
     extends NativeIFDSProblem[Fact, JavaFact](project, new NativeForwardICFG(project))
@@ -21,9 +18,7 @@ abstract class NativeBackwardIFDSProblem[Fact <: AbstractIFDSFact, JavaFact <: A
 abstract class NativeIFDSProblem[Fact <: AbstractIFDSFact, JavaFact <: AbstractIFDSFact](project: SomeProject, override val icfg: NativeICFG)
     extends IFDSProblem[Fact, NativeFunction, LLVMStatement](icfg) {
     final implicit val propertyStore: PropertyStore = project.get(PropertyStoreKey)
-    val llvmProject = project.get(LLVMProjectKey)
     val javaPropertyKey: PropertyKey[Property]
-    val tacai: Method => TACode[TACMethodParameter, DUVar[ValueInformation]] = project.get(LazyDetachedTACAIKey)
     val javaICFG: JavaICFG
 
     override def createCallable(callable: NativeFunction): Callable = callable
