@@ -7,6 +7,7 @@ import org.opalj.ll.LLVMProjectKey
 import org.opalj.ll.fpcf.analyses.ifds.{JNICallUtil, LLVMFunction}
 import org.opalj.ll.llvm.value.constant.{ConstantDataArray, ConstantIntValue, ConstantStruct, GetElementPtrConst, PtrToIntConst}
 import org.opalj.ll.llvm.value.{Argument, BinaryOperation, Call, GetElementPtr, GlobalAlias, GlobalVariable, IntToPtr, Load, Store, Value}
+import org.opalj.log.{GlobalLogContext, LogContext, OPALLogger}
 
 /**
  * TODO
@@ -15,6 +16,8 @@ import org.opalj.ll.llvm.value.{Argument, BinaryOperation, Call, GetElementPtr, 
  * @author Nicolas Gross
  */
 object JNICallDetectionAnalysis {
+    private implicit val LogContext: LogContext = GlobalLogContext
+    private val LogCategory = "JNI Call Detection"
 
     def analyze(call: Call, project: SomeProject): Option[Set[Method]] = {
         val func = call.function
@@ -22,7 +25,12 @@ object JNICallDetectionAnalysis {
         implicit val declaredMethods: DeclaredMethods = project.get(DeclaredMethodsKey)
 
          resolveJNIFunction(call, project) match {
-            case Some(Symbol("CallTypeMethod")) => resolveMethodId(call.operand(2), project) // methodID is the third parameter
+            case Some(Symbol("CallTypeMethod")) => resolveMethodId(call.operand(2), project) match { // methodID is the third parameter
+                case None =>
+                    OPALLogger.warn(LogCategory, s"called method in JNI call could not be resolved: $call in ${call.function}")
+                    None
+                case methods => methods
+            }
             case _ => None
         }
     }
