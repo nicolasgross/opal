@@ -45,7 +45,7 @@ abstract class AbstractBackwardFlowPathMatcher(pk: PropertyKey[_ <: Property]) e
             None
         } else {
             if (allReachableFlowFacts.contains(expectedFlow)) None
-            else Some(expectedFlow.mkString(", "))
+            else Some(expectedFlow.mkString(", ")+"\nactual: "+allReachableFlowFacts.mkString(", "))
         }
     }
 }
