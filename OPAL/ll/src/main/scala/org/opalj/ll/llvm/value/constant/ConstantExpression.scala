@@ -83,12 +83,7 @@ object ConstantExpression {
     }
 }
 
-sealed abstract class ConstantExpression(ref: LLVMValueRef) extends User(ref) {
-    def base: Value = operand(0)
-    def isConstant = (1 until numOperands).forall(operand(_).isInstanceOf[ConstantIntValue])
-    def constants = (1 until numOperands).map(operand(_).asInstanceOf[ConstantIntValue].signExtendedValue)
-    def isZero = isConstant && constants.forall(_ == 0)
-}
+sealed abstract class ConstantExpression(ref: LLVMValueRef) extends User(ref)
 
 // // case class RetConst(ref: LLVMValueRef) extends ConstantExpression(ref)
 // case class BrConst(ref: LLVMValueRef) extends ConstantExpression(ref)
@@ -119,7 +114,12 @@ sealed abstract class ConstantExpression(ref: LLVMValueRef) extends User(ref) {
 // case class AllocaConst(ref: LLVMValueRef) extends ConstantExpression(ref)
 // case class LoadConst(ref: LLVMValueRef) extends ConstantExpression(ref)
 // case class StoreConst(ref: LLVMValueRef) extends ConstantExpression(ref)
-case class GetElementPtrConst(ref: LLVMValueRef) extends ConstantExpression(ref)
+case class GetElementPtrConst(ref: LLVMValueRef) extends ConstantExpression(ref) {
+    def base: Value = operand(0)
+    def isConstant = (1 until numOperands).forall(operand(_).isInstanceOf[ConstantIntValue])
+    def constants = (1 until numOperands).map(operand(_).asInstanceOf[ConstantIntValue].signExtendedValue)
+    def isZero = isConstant && constants.forall(_ == 0)
+}
 // case class TruncConst(ref: LLVMValueRef) extends ConstantExpression(ref)
 // case class ZExtConst(ref: LLVMValueRef) extends ConstantExpression(ref)
 // case class SExtConst(ref: LLVMValueRef) extends ConstantExpression(ref)

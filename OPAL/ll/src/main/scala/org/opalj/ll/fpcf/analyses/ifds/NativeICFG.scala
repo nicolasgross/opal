@@ -18,25 +18,24 @@ abstract class NativeICFG(project: SomeProject) extends ICFG[NativeFunction, LLV
      */
     override def getCalleesIfCallStatement(statement: LLVMStatement): Option[Set[_ <: NativeFunction]] = {
         statement.instruction match {
-            case call: Call => resolveCallee(call) match {
-                case Some(method) => Some(Set(method))
-                case None => None
-            }
+            case call: Call => Some(resolveCallees(call))
             case _          => None
         }
     }
 
-    def resolveCallee(call: Call): Option[_ <: NativeFunction] = {
+    def resolveCallees(call: Call): Set[_ <: NativeFunction] = {
         val jniCallDetection = project.get(LazyJNICallDetectionKey)
         call.calledValue match {
-            case function: Function => Some(LLVMFunction(function))
+            case function: Function => Set(LLVMFunction(function))
             case _ => jniCallDetection(call) match {
-                case Some(method) => Some(JNIMethod(method))
-                case None => None
+                case Some(methods) => methods.map(JNIMethod)
+                case None => Set.empty
             }
         }
     }
 
-    override def getCallers(callee: NativeFunction): Set[LLVMStatement] =
-        project.get(SimpleNativeCallGraphKey)(callee).getOrElse(Set.empty).map(LLVMStatement)
+    override def getCallers(callee: NativeFunction): Set[LLVMStatement] = {
+        val cg = project.get(SimpleNativeCallGraphKey)
+        cg(callee).getOrElse(Set.empty).map(LLVMStatement)
+    }
 }

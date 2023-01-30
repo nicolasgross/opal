@@ -7,8 +7,9 @@ class LLVMProject(val modules: Iterable[Module]) {
     def functions: Iterable[value.Function] =
         modules.flatMap(module => module.functions)
 
-    def function(name: String): Option[value.Function] =
+    def function(name: String): Option[value.Function] = {
         functions.find(_.name == name)
+    }
 }
 
 object LLVMProject {

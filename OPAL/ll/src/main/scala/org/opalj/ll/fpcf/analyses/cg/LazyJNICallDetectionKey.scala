@@ -8,7 +8,7 @@ import org.opalj.ll.llvm.value.Call
 
 import scala.collection.concurrent.TrieMap
 
-object LazyJNICallDetectionKey extends ProjectInformationKey[Call => Option[Method], Nothing] {
+object LazyJNICallDetectionKey extends ProjectInformationKey[Call => Option[Set[Method]], Nothing] {
 
     /**
      * The JNI call detection requires a LLVM project.
@@ -20,21 +20,21 @@ object LazyJNICallDetectionKey extends ProjectInformationKey[Call => Option[Meth
     /**
      * Returns an factory which detects and caches whether a call is a JNI call.
      */
-    override def compute(project: SomeProject): Call => Option[Method] = {
-        val detections = TrieMap.empty[Call, Option[Method]]
+    override def compute(project: SomeProject): Call => Option[Set[Method]] = {
+        val detections = TrieMap.empty[Call, Option[Set[Method]]]
 
-        def detectAndCache(call: Call): Option[Method] = {
-            val detection = JNICallDetectionAnalysis.analyze(call, project)
-            detections.put(call, detection)
-            detection
+        def detectAndCache(call: Call): Option[Set[Method]] = {
+            val methods = JNICallDetectionAnalysis.analyze(call, project)
+            detections.put(call, methods)
+            methods
         }
 
         (call: Call) =>
             detections.get(call) match {
-                case Some(method) => method
+                case Some(methods) => methods
                 case None => call.synchronized {
                     detections.get(call) match {
-                        case Some(method) => method
+                        case Some(methods) => methods
                         case None => detectAndCache(call)
                     }
                 }

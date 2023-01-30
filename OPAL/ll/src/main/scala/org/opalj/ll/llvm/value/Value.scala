@@ -4,7 +4,7 @@ package value
 
 import org.bytedeco.llvm.LLVM.{LLVMUseRef, LLVMValueRef}
 import org.bytedeco.llvm.global.LLVM._
-import org.opalj.ll.llvm.value.constant.{ConstantDataArray, ConstantDataVector, ConstantExpression, ConstantIntValue, ConstantPointerNullValue, UndefValue}
+import org.opalj.ll.llvm.value.constant.{ConstantDataArray, ConstantDataVector, ConstantExpression, ConstantIntValue, ConstantPointerNullValue, ConstantStruct, UndefValue}
 
 class Value(ref: LLVMValueRef) {
     def repr: String = {
@@ -43,13 +43,13 @@ object Value {
             //LLVMMemoryDefValueKind
             //LLVMMemoryPhiValueKind
             case LLVMFunctionValueKind            => Function(ref)
-            //case LLVMGlobalAliasValueKind
+            case LLVMGlobalAliasValueKind         => GlobalAlias(ref)
             //LLVMGlobalIFuncValueKind
             case LLVMGlobalVariableValueKind      => GlobalVariable(ref)
             //LLVMBlockAddressValueKind
             case LLVMConstantExprValueKind        => ConstantExpression(ref)
             //LLVMConstantArrayValueKind
-            //LLVMConstantStructValueKind
+            case LLVMConstantStructValueKind      => ConstantStruct(ref)
             //LLVMConstantVectorValueKind
             case LLVMUndefValueValueKind          => UndefValue(ref)
             //LLVMConstantAggregateZeroValueKind

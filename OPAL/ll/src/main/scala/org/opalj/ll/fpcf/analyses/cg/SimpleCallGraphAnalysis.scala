@@ -54,10 +54,11 @@ class SimpleCallGraphAnalysis(val project: SomeProject) extends FPCFAnalysis {
                     val newCalls = cg.getOrElse(LLVMFunction(f), Set.empty) ++ Set(c)
                     cg.update(LLVMFunction(f), newCalls)
                 case _ => jniCallDetection(c) match {
-                    case Some(method) =>
-                        val jniCallee = JNIMethod(method)
-                        val newCalls = cg.getOrElse(jniCallee, Set.empty) ++ Set(c)
-                        cg.update(jniCallee, newCalls)
+                    case Some(methods) =>
+                        for (jniCallee <- methods.map(JNIMethod)) {
+                            val newCalls = cg.getOrElse(jniCallee, Set.empty) ++ Set(c)
+                            cg.update(jniCallee, newCalls)
+                        }
                     case None => None
                 }
             }

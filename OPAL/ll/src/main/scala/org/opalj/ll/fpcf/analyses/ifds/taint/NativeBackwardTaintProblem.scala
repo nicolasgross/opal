@@ -73,7 +73,7 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
             case _                                       => Set(in)
         }
         case convOp: ConversionOperation => in match {
-            case NativeVariable(value) if value == convOp => Set(in, NativeVariable(convOp.value))
+            case NativeVariable(value) if value == convOp => Set(in, NativeVariable(convOp.convVal))
             case _                                        => Set(in)
         }
         case extrElem: ExtractElement =>

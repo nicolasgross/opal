@@ -120,7 +120,7 @@ sealed abstract class BinaryOperation(ref: LLVMValueRef) extends Instruction(ref
 }
 
 sealed abstract class ConversionOperation(ref: LLVMValueRef) extends Instruction(ref) {
-    def value: Value = operand(0) // value
+    def convVal: Value = operand(0) // value
     def newType: Value = operand(1) // type
 }
 
