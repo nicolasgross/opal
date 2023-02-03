@@ -4,7 +4,7 @@ package org.opalj.ll.llvm
 
 import org.bytedeco.javacpp.BytePointer
 import org.bytedeco.llvm.LLVM.{LLVMContextRef, LLVMMemoryBufferRef, LLVMModuleRef}
-import org.bytedeco.llvm.global.LLVM.{LLVMContextCreate, LLVMCreateMemoryBufferWithContentsOfFile, LLVMDisposeMessage, LLVMGetTarget, LLVMParseIRInContext}
+import org.bytedeco.llvm.global.LLVM.{LLVMContextCreate, LLVMCreateMemoryBufferWithContentsOfFile, LLVMDisposeMessage, LLVMParseIRInContext}
 
 object Reader {
     def readIR(path: String): Option[Module] = {
@@ -23,8 +23,6 @@ object Reader {
             LLVMDisposeMessage(out_message)
             return None
         }
-        val targetTriple = LLVMGetTarget(module).getString
-        val is64Bit = targetTriple.startsWith("x86_64") || targetTriple.startsWith("aarch64")
-        Some(Module(module, is64Bit))
+        Some(Module(module))
     }
 }

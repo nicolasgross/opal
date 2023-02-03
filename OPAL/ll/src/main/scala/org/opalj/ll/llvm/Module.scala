@@ -5,7 +5,8 @@ import org.bytedeco.llvm.LLVM.{LLVMModuleRef, LLVMValueRef}
 import org.bytedeco.llvm.global.LLVM.{LLVMDisposeMessage, LLVMGetFirstFunction, LLVMGetNamedFunction, LLVMGetNextFunction, LLVMGetTarget, LLVMPrintModuleToString}
 import org.opalj.ll.llvm.value.{Function, Value}
 
-case class Module(ref: LLVMModuleRef, is64Bit: Boolean) {
+case class Module(ref: LLVMModuleRef) {
+
     def functions: FunctionIterator = {
         new FunctionIterator(LLVMGetFirstFunction(ref))
     }
@@ -17,10 +18,11 @@ case class Module(ref: LLVMModuleRef, is64Bit: Boolean) {
         string
     }
 
-    def targetTriple: String = {
-        val bytePointer = LLVMGetTarget(ref)
-        val string = bytePointer.getString
-        string
+    def targetTriple: String = LLVMGetTarget(ref).getString()
+
+    val is64Bit: Boolean = {
+        val targetTriple = LLVMGetTarget(ref).getString
+        targetTriple.startsWith("x86_64") || targetTriple.startsWith("aarch64")
     }
 
     def function(name: String): Function =

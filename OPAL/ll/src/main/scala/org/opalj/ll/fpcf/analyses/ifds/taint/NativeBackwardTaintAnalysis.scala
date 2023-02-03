@@ -6,7 +6,7 @@ import org.opalj.fpcf.{PropertyBounds, PropertyKey, PropertyStore}
 import org.opalj.ifds.{Callable, IFDSFact, IFDSPropertyMetaInformation}
 import org.opalj.ll.LLVMProjectKey
 import org.opalj.ll.fpcf.analyses.cg.SimpleNativeCallGraphKey
-import org.opalj.ll.fpcf.analyses.ifds.{LLVMFunction, LLVMStatement, NativeFunction, NativeIFDSAnalysis, NativeIFDSAnalysisScheduler}
+import org.opalj.ll.fpcf.analyses.ifds.{LLVMFunction, LLVMStatement, McSemaUtil, NativeFunction, NativeIFDSAnalysis, NativeIFDSAnalysisScheduler}
 import org.opalj.ll.fpcf.properties.NativeTaint
 import org.opalj.ll.llvm.value.Call
 import org.opalj.tac.fpcf.properties.Taint
@@ -20,17 +20,22 @@ class SimpleNativeBackwardTaintProblem(p: SomeProject) extends NativeBackwardTai
      * The analysis starts with the sink function.
      */
     override val entryPoints: Seq[(NativeFunction, IFDSFact[NativeTaintFact, LLVMStatement])] = {
-        val sinkFunc = llvmProject.function("sink")
-        if (sinkFunc.isDefined)
-            Seq((LLVMFunction(sinkFunc.get), new IFDSFact(NativeVariable(sinkFunc.get.argument(0)))))
-        else Seq.empty
+        val sinkFuncs = llvmProject.functions.filter(f => f.name == "sink" ||
+            McSemaUtil.matchesMcSemaFunctionName(f.name, "sink")).toSeq
+        sinkFuncs.map(sinkFunc =>
+            if (McSemaUtil.isMcSemaStateType(sinkFunc.argument(0).typ)) {
+                (LLVMFunction(sinkFunc), new IFDSFact(NativeArrayElement(sinkFunc.argument(0),
+                    McSemaUtil.archToFirstArgRegIndices(sinkFunc.parent.targetTriple))))
+            }
+            else (LLVMFunction(sinkFunc), new IFDSFact(NativeVariable(sinkFunc.argument(0))))
+        )
     }
 
     /**
      * The sanitize method is a sanitizer.
      */
     override protected def sanitizesReturnValue(callee: NativeFunction): Boolean =
-        callee.name == "sanitize"
+        callee.name == "sanitize" || McSemaUtil.matchesMcSemaFunctionName(callee.name, "sanitize")
 
     /**
      * We do not sanitize parameters.
@@ -39,13 +44,14 @@ class SimpleNativeBackwardTaintProblem(p: SomeProject) extends NativeBackwardTai
 
     override protected def createFlowFactAtCall(call: LLVMStatement, in: NativeTaintFact,
                                                 unbCallChain: Seq[Callable]): Option[NativeTaintFact] = {
-        // create flow facts if callee is source or sink
+        // create flow facts if callee is source
         val callInstr = call.instruction.asInstanceOf[Call]
         val callees = icfg.resolveCallees(callInstr)
-        if (callees.exists(_.name == "source")) in match {
+        if (callees.exists(callee => callee.name == "source" ||
+            McSemaUtil.matchesMcSemaFunctionName(callee.name, "source"))) in match {
             // create flow fact if source is reached with tainted value
-            case NativeVariable(value) if value == call.instruction && !unbCallChain.contains(call.callable) =>
-                Some(NativeFlowFact(unbCallChain.prepended(call.callable)))
+            case NativeVariable(value) if (value == call.instruction || McSemaUtil.mcSemaRetvalTainted(call, in)(p)) &&
+                !unbCallChain.contains(call.callable) => Some(NativeFlowFact(unbCallChain.prepended(call.callable)))
             case _ => None
         }
         else None

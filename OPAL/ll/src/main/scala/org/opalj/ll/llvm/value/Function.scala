@@ -4,9 +4,12 @@ package org.opalj.ll.llvm.value
 import org.bytedeco.llvm.LLVM.{LLVMBasicBlockRef, LLVMValueRef}
 import org.bytedeco.llvm.global.LLVM._
 import org.opalj.io.writeAndOpen
+import org.opalj.ll.llvm.Module
 
 case class Function(ref: LLVMValueRef) extends Value(ref) {
     assert(LLVMGetValueKind(ref) == LLVMFunctionValueKind, "ref has to be a function")
+
+    def parent: Module = Module(LLVMGetGlobalParent(ref))
 
     def basicBlocks: BasicBlockIterator = {
         new BasicBlockIterator(LLVMGetFirstBasicBlock(ref))

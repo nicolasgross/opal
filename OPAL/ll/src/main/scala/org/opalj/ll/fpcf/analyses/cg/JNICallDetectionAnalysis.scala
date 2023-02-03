@@ -3,7 +3,6 @@ package org.opalj.ll.fpcf.analyses.cg
 
 import org.opalj.br.Method
 import org.opalj.br.analyses.{DeclaredMethods, DeclaredMethodsKey, SomeProject}
-import org.opalj.ll.LLVMProjectKey
 import org.opalj.ll.fpcf.analyses.ifds.{JNICallUtil, LLVMFunction}
 import org.opalj.ll.llvm.value.constant.{ConstantDataArray, ConstantIntValue, ConstantStruct, GetElementPtrConst, PtrToIntConst}
 import org.opalj.ll.llvm.value.{Argument, BinaryOperation, Call, GetElementPtr, GlobalAlias, GlobalVariable, IntToPtr, Load, Store, Value}
@@ -54,10 +53,9 @@ object JNICallDetectionAnalysis {
         }
 
         def matchBinOpOperand(operand: Value): Option[Symbol] = {
-            val is64Bit = project.get(LLVMProjectKey).modules.head.is64Bit
             operand match {
                 case value: ConstantIntValue =>
-                    val divisor = if (is64Bit) 8 else 4
+                    val divisor = if (call.function.parent.is64Bit) 8 else 4
                     matchJNIEnvIndex(value.signExtendedValue / divisor)
                 case _ => None
             }
@@ -148,24 +146,22 @@ object JNICallDetectionAnalysis {
         case _ => None
     }
 
-    private def resolveClass(clazz: Value, project: SomeProject): Option[String] = {
-        val getClassCall = getOriginCall(clazz) match {
-            case Some(call) => call
-            case None => return Some("") // could still be a JNI call, class object might have other origin, e.g. function parameter
-        }
-        resolveJNIFunction(getClassCall, project) match {
+    private def resolveClass(clazz: Value, project: SomeProject): Option[String] = getOriginCall(clazz) match {
+        case Some(call) => resolveJNIFunction(call, project) match {
             case Some(jniFunc) if jniFunc == Symbol("GetObjectClass") =>
-                JNICallUtil.resolveNativeMethodName(LLVMFunction(getClassCall.function)) match {
+                JNICallUtil.resolveNativeMethodName(LLVMFunction(call.function)) match {
                     // caller is JNI function (detect by function name) and class is taken from callers second arg (this reference):
-                    case Some(ident) if resolveValueIsSecondArg(getClassCall.operand(1)) => Some(ident._1)
+                    case Some(ident) if resolveValueIsSecondArg(call.operand(1)) => Some(ident._1)
                     // caller is no JNI function or class cannot be resolved to callers second arg:
                     case _ => Some("")
                 }
             //case Some(jniFunc) if jniFunc == Symbol("FindClass") => TODO resolve
-            // TODO resolve static native calls, second arg of JNI function caller is class not this
             case _ => None // seems to be no JNI call
         }
+        case None => Some("") // could still be a JNI call, class object might have other origin, e.g. function parameter
+        // TODO resolve static native calls, second arg of JNI function caller is class not this
     }
+
 
     private def resolveValueIsSecondArg(obj: Value): Boolean = obj match {
         // in compiled LLVM IR, obj could be tracked to the function's args
