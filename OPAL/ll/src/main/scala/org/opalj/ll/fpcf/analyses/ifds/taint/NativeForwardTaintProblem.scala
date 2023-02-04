@@ -4,16 +4,12 @@ package org.opalj.ll.fpcf.analyses.ifds.taint
 import org.opalj.br.Method
 import org.opalj.br.analyses.SomeProject
 import org.opalj.ifds.Callable
-import org.opalj.ll.fpcf.analyses.ifds.{JNIMethod, LLVMFunction, LLVMStatement, NativeForwardIFDSProblem, NativeFunction}
+import org.opalj.ll.fpcf.analyses.ifds._
 import org.opalj.ll.llvm.PointerType
 import org.opalj.ll.llvm.value.{Alloca, Argument, BinaryOperation, Call, ConversionOperation, GetElementPtr, Load, PHI, Ret, Store}
-import org.opalj.tac.fpcf.analyses.ifds.{JavaForwardICFG, JavaIFDSProblem, JavaStatement}
-import org.opalj.tac.fpcf.analyses.ifds.taint.{TaintFact, TaintProblem}
-import org.opalj.tac.fpcf.analyses.ifds.taint.FlowFact
-import org.opalj.tac.fpcf.analyses.ifds.taint.StaticField
-import org.opalj.tac.fpcf.analyses.ifds.taint.TaintNullFact
-import org.opalj.tac.fpcf.analyses.ifds.taint.Variable
 import org.opalj.tac.ReturnValue
+import org.opalj.tac.fpcf.analyses.ifds.taint._
+import org.opalj.tac.fpcf.analyses.ifds.{JavaForwardICFG, JavaIFDSProblem, JavaStatement}
 
 abstract class NativeForwardTaintProblem(project: SomeProject)
     extends NativeForwardIFDSProblem[NativeTaintFact, TaintFact](project)
@@ -139,19 +135,15 @@ abstract class NativeForwardTaintProblem(project: SomeProject)
             case ret: Ret if ret.value.isDefined => in match {
                 case NativeVariable(value) if ret.value.contains(value) => flows += NativeVariable(call.instruction)
                 case NativeArrayElement(base, indices) if ret.value.contains(base) => flows += NativeArrayElement(call.instruction, indices)
+                case NativeTaintNullFact => flows ++= createTaints(callee, call)
                 case _ =>
             }
             case _ =>
         }
 
-        if (exit.callable.name == "source") in match {
-            case NativeTaintNullFact => flows += NativeVariable(call.instruction)
-        }
-        if (exit.callable.name == "sink") in match {
-            case NativeVariable(value) if value == exit.callable.function.argument(0) =>
-                flows += NativeFlowFact(Seq(call.callable, exit.callable))
-            case _ =>
-        }
+        val flowFact = createFlowFact(callee, call, in)
+        if (flowFact.isDefined) flows += flowFact.get
+
         flows
     }
 
@@ -244,4 +236,14 @@ abstract class NativeForwardTaintProblem(project: SomeProject)
         }
         flows
     }
+
+    /**
+     * Creates a new variable fact for the callee, if the source was called.
+     */
+    protected def createTaints(callee: LLVMFunction, call: LLVMStatement): Set[NativeTaintFact]
+
+    /**
+     * Create a FlowFact, if sink is called with a tainted variable.
+     */
+    protected def createFlowFact(callee: LLVMFunction, call: LLVMStatement, in: NativeTaintFact): Option[NativeFlowFact]
 }

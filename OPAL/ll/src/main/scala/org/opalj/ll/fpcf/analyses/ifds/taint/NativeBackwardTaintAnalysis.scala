@@ -24,8 +24,9 @@ class SimpleNativeBackwardTaintProblem(p: SomeProject) extends NativeBackwardTai
             McSemaUtil.matchesMcSemaFunctionName(f.name, "sink")).toSeq
         sinkFuncs.map(sinkFunc =>
             if (McSemaUtil.isMcSemaStateType(sinkFunc.argument(0).typ)) {
+                // args are passed via state struct in McSema sub_... functions
                 (LLVMFunction(sinkFunc), new IFDSFact(NativeArrayElement(sinkFunc.argument(0),
-                    McSemaUtil.archToFirstArgRegIndices(sinkFunc.parent.targetTriple))))
+                    McSemaUtil.getFirstArgRegIndices(sinkFunc.parent.targetTriple))))
             }
             else (LLVMFunction(sinkFunc), new IFDSFact(NativeVariable(sinkFunc.argument(0))))
         )

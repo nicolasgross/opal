@@ -21,7 +21,7 @@ object McSemaUtil {
      * @param targetTriple target triple of the IR for architecture detection.
      * @return the indices of the return register in McSema state.
      */
-    private def archToReturnRegIndices(targetTriple: String): Seq[Long] = {
+    private def getReturnRegIndices(targetTriple: String): Seq[Long] = {
         if (targetTriple.startsWith("x86_64")) Seq(0, 6, 1, 0, 0) // indices of RAX in McSema state
         else if (targetTriple.startsWith("x86")) ??? // TODO
         else if (targetTriple.startsWith("aarch64")) ??? // TODO
@@ -29,7 +29,7 @@ object McSemaUtil {
         else Seq.empty
     }
 
-    def archToFirstArgRegIndices(targetTriple: String): Seq[Long] = {
+    def getFirstArgRegIndices(targetTriple: String): Seq[Long] = {
         if (targetTriple.startsWith("x86_64")) Seq(0, 6, 11, 0, 0) // indices of RDI in McSema state
         else if (targetTriple.startsWith("x86")) ??? // TODO
         else if (targetTriple.startsWith("aarch64")) ??? // TODO
@@ -62,7 +62,7 @@ object McSemaUtil {
 
         def gepMatchesReturnReg(gep: GetElementPtr): Boolean =
             if (gep.isConstant && isMcSemaStateType(gep.sourceElementType))
-                gep.constants == archToReturnRegIndices(call.function.function.parent.targetTriple)
+                gep.constants == getReturnRegIndices(call.function.function.parent.targetTriple)
             else false
 
         in match {

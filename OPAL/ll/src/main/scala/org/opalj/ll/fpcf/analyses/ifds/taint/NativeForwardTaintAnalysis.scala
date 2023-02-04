@@ -4,9 +4,8 @@ package org.opalj.ll.fpcf.analyses.ifds.taint
 import org.opalj.br.analyses.SomeProject
 import org.opalj.fpcf.{PropertyBounds, PropertyKey, PropertyStore}
 import org.opalj.ifds.{Callable, IFDSFact, IFDSPropertyMetaInformation}
-import org.opalj.ll.fpcf.analyses.ifds.{LLVMStatement, NativeFunction, NativeIFDSAnalysis, NativeIFDSAnalysisScheduler}
+import org.opalj.ll.fpcf.analyses.ifds.{LLVMFunction, LLVMStatement, McSemaUtil, NativeFunction, NativeIFDSAnalysis, NativeIFDSAnalysisScheduler}
 import org.opalj.ll.fpcf.properties.NativeTaint
-import org.opalj.ll.llvm.value.Function
 import org.opalj.tac.fpcf.properties.Taint
 
 class SimpleNativeForwardTaintProblem(p: SomeProject) extends NativeForwardTaintProblem(p) {
@@ -20,32 +19,23 @@ class SimpleNativeForwardTaintProblem(p: SomeProject) extends NativeForwardTaint
      * The sanitize method is a sanitizer.
      */
     override protected def sanitizesReturnValue(callee: NativeFunction): Boolean =
-        callee.name == "sanitize"
+        callee.name == "sanitize" || McSemaUtil.matchesMcSemaFunctionName(callee.name, "sanitize")
 
     /**
      * We do not sanitize parameters.
      */
     override protected def sanitizesParameter(call: LLVMStatement, in: NativeTaintFact): Boolean = false
 
-    /**
-     * TODO: DEAD CODE - remove?
-     * Creates a new variable fact for the callee, if the source was called.
-     */
-    protected def createTaints(callee: Function, call: LLVMStatement): Set[NativeTaintFact] =
+    override protected def createTaints(callee: LLVMFunction, call: LLVMStatement): Set[NativeTaintFact] =
         if (callee.name == "source") Set(NativeVariable(call.instruction))
         else Set.empty
 
-    /**
-     * TODO: DEAD CODE - remove?
-     * Create a FlowFact, if sink is called with a tainted variable.
-     * Note, that sink does not accept array parameters. No need to handle them.
-     */
-    protected def createFlowFact(
-        callee: Function,
-        call:   LLVMStatement,
-        in:     Set[NativeTaintFact]
-    ): Option[NativeFlowFact] =
-        if (callee.name == "sink" && in.contains(JavaVariable(-2))) Some(NativeFlowFact(Seq(call.function)))
+    override protected def createFlowFact(callee: LLVMFunction, call: LLVMStatement, in: NativeTaintFact): Option[NativeFlowFact] =
+        if (callee.name == "sink") in match {
+            case NativeVariable(value) if value == callee.function.argument(0) =>
+                Some(NativeFlowFact(Seq(call.callable, callee)))
+            case _ => None
+        }
         else None
 
     override def createFlowFactAtExit(callee: NativeFunction, in: NativeTaintFact,
