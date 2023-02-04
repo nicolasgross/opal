@@ -4,14 +4,16 @@ package org.opalj.fpcf.properties.taint
 import org.opalj.br.analyses.SomeProject
 import org.opalj.br.{AnnotationLike, ElementValue, ElementValuePair, ObjectType}
 import org.opalj.fpcf.properties.AbstractPropertyMatcher
-import org.opalj.fpcf.{Entity, Property}
+import org.opalj.fpcf.{Entity, Property, PropertyKey}
 import org.opalj.ifds.IFDSProperty
-import org.opalj.tac.fpcf.analyses.ifds.taint.FlowFact
+import org.opalj.tac.fpcf.analyses.ifds.taint.{FlowFact, ForwardTaintAnalysisFixtureScheduler}
+
+class ForwardFlowPathMatcher extends AbstractForwardFlowPathMatcher(ForwardTaintAnalysisFixtureScheduler.property.key)
 
 /**
  * @author Mario Trageser
  */
-class ForwardFlowPathMatcher extends AbstractPropertyMatcher {
+abstract class AbstractForwardFlowPathMatcher(pk: PropertyKey[_ <: Property]) extends AbstractPropertyMatcher {
 
     def validateProperty(
         p:          SomeProject,
@@ -36,7 +38,7 @@ class ForwardFlowPathMatcher extends AbstractPropertyMatcher {
             None
         } else {
             if (flows.contains(expectedFlow)) None
-            else Some(expectedFlow.mkString(", "))
+            else Some(expectedFlow.mkString(", ")+"\nactual: "+flows.mkString(", "))
         }
     }
 }

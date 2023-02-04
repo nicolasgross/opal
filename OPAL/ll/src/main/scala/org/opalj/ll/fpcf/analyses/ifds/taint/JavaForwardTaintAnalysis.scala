@@ -22,7 +22,10 @@ class SimpleJavaForwardTaintProblem(p: SomeProject) extends JavaForwardTaintProb
      * The analysis starts with all public methods in TaintAnalysisTestClass.
      */
     override val entryPoints: Seq[(Method, IFDSFact[TaintFact, JavaStatement])] = for {
-        m <- p.allMethodsWithBody
+        m <- p.allProjectClassFiles.filter(classFile =>
+            classFile.thisType.fqn == "org/opalj/fpcf/fixtures/taint_xlang/TaintTest")
+            .flatMap(_.methods)
+            .filter(_.body.isDefined)
     } yield m -> new IFDSFact(TaintNullFact)
 
     /**
