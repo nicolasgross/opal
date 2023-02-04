@@ -24,6 +24,18 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
 
     override def needsPredecessor(statement: LLVMStatement): Boolean = false
 
+    /**
+     * Taints the pointers that a value/pointer is casted from.
+     */
+    private def taintCastedPointer(value: Value): Set[NativeTaintFact] = value match {
+        case convOp: ConversionOperation => convOp.convVal match {
+            case gep: GetElementPtr if gep.isConstant =>
+                Set(NativeVariable(value), NativeVariable(gep), NativeArrayElement(gep.base, gep.constants))
+            case _ => Set(NativeVariable(convOp.convVal))
+        }
+        case _ => Set.empty
+    }
+
     override def normalFlow(statement: LLVMStatement, in: NativeTaintFact,
                             predecessor: Option[LLVMStatement]): Set[NativeTaintFact] = statement.instruction match {
         case store: Store => in match {
@@ -43,7 +55,7 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
             case _ => Set(in)
         }
         case load: Load => in match {
-            case NativeVariable(value) if value == load => Set(in, NativeVariable(load.src))
+            case NativeVariable(value) if value == load => Set(in, NativeVariable(load.src)) ++ taintCastedPointer(load.src)
             case NativeArrayElement(base, indices) if base == load => load.src match { // src is pointer type
                 // array loaded from alloca
                 case src: Alloca => Set(in, NativeArrayElement(src, indices))

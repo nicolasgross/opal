@@ -9,7 +9,7 @@ import org.opalj.ll.llvm.Module
 case class Function(ref: LLVMValueRef) extends Value(ref) {
     assert(LLVMGetValueKind(ref) == LLVMFunctionValueKind, "ref has to be a function")
 
-    def parent: Module = Module(LLVMGetGlobalParent(ref))
+    def module: Module = Module(LLVMGetGlobalParent(ref))
 
     def basicBlocks: BasicBlockIterator = {
         new BasicBlockIterator(LLVMGetFirstBasicBlock(ref))

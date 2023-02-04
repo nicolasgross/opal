@@ -4,17 +4,16 @@ package org.opalj.ll.fpcf.analyses.ifds.taint
 import org.opalj.br.analyses.{ProjectInformationKeys, SomeProject}
 import org.opalj.fpcf.{PropertyBounds, PropertyKey, PropertyStore}
 import org.opalj.ifds.{Callable, IFDSFact, IFDSPropertyMetaInformation}
-import org.opalj.ll.LLVMProjectKey
+import org.opalj.ll.{LLVMProject, LLVMProjectKey}
 import org.opalj.ll.fpcf.analyses.cg.SimpleNativeCallGraphKey
 import org.opalj.ll.fpcf.analyses.ifds.{LLVMFunction, LLVMStatement, McSemaUtil, NativeFunction, NativeIFDSAnalysis, NativeIFDSAnalysisScheduler}
 import org.opalj.ll.fpcf.properties.NativeTaint
-import org.opalj.ll.llvm.value.Call
 import org.opalj.tac.fpcf.properties.Taint
 
 class SimpleNativeBackwardTaintProblem(p: SomeProject) extends NativeBackwardTaintProblem(p) {
 
     override val javaPropertyKey: PropertyKey[Taint] = Taint.key
-    val llvmProject = p.get(LLVMProjectKey)
+    val llvmProject: LLVMProject = p.get(LLVMProjectKey)
 
     /**
      * The analysis starts with the sink function.
@@ -26,9 +25,8 @@ class SimpleNativeBackwardTaintProblem(p: SomeProject) extends NativeBackwardTai
             if (McSemaUtil.isMcSemaStateType(sinkFunc.argument(0).typ)) {
                 // args are passed via state struct in McSema sub_... functions
                 (LLVMFunction(sinkFunc), new IFDSFact(NativeArrayElement(sinkFunc.argument(0),
-                    McSemaUtil.getFirstArgRegIndices(sinkFunc.parent.targetTriple))))
-            }
-            else (LLVMFunction(sinkFunc), new IFDSFact(NativeVariable(sinkFunc.argument(0))))
+                    McSemaUtil.getFirstArgRegIndices(sinkFunc.module.targetTriple))))
+            } else (LLVMFunction(sinkFunc), new IFDSFact(NativeVariable(sinkFunc.argument(0))))
         )
     }
 
@@ -46,16 +44,14 @@ class SimpleNativeBackwardTaintProblem(p: SomeProject) extends NativeBackwardTai
     override protected def createFlowFactAtCall(call: LLVMStatement, in: NativeTaintFact,
                                                 unbCallChain: Seq[Callable]): Option[NativeTaintFact] = {
         // create flow facts if callee is source
-        val callInstr = call.instruction.asInstanceOf[Call]
-        val callees = icfg.resolveCallees(callInstr)
+        val callees = icfg.getCalleesIfCallStatement(call).get
         if (callees.exists(callee => callee.name == "source" ||
             McSemaUtil.matchesMcSemaFunctionName(callee.name, "source"))) in match {
             // create flow fact if source is reached with tainted value
             case NativeVariable(value) if (value == call.instruction || McSemaUtil.mcSemaRetvalTainted(call, in)(p)) &&
                 !unbCallChain.contains(call.callable) => Some(NativeFlowFact(unbCallChain.prepended(call.callable)))
             case _ => None
-        }
-        else None
+        } else None
     }
 
     override def createFlowFactAtExit(callee: NativeFunction, in: NativeTaintFact,

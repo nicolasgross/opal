@@ -23,7 +23,7 @@ abstract class NativeICFG(project: SomeProject) extends ICFG[NativeFunction, LLV
         }
     }
 
-    def resolveCallees(call: Call): Set[_ <: NativeFunction] = {
+    private def resolveCallees(call: Call): Set[_ <: NativeFunction] = {
         val jniCallDetection = project.get(LazyJNICallDetectionKey)
         call.calledValue match {
             case function: Function => Set(LLVMFunction(function))

@@ -55,7 +55,7 @@ object JNICallDetectionAnalysis {
         def matchBinOpOperand(operand: Value): Option[Symbol] = {
             operand match {
                 case value: ConstantIntValue =>
-                    val divisor = if (call.function.parent.is64Bit) 8 else 4
+                    val divisor = if (call.function.module.is64Bit) 8 else 4
                     matchJNIEnvIndex(value.signExtendedValue / divisor)
                 case _ => None
             }
