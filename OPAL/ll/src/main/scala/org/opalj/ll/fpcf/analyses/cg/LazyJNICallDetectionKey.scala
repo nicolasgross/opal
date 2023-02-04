@@ -35,7 +35,7 @@ object LazyJNICallDetectionKey extends ProjectInformationKey[Call => Option[Set[
                 case None => call.synchronized {
                     detections.get(call) match {
                         case Some(methods) => methods
-                        case None => detectAndCache(call)
+                        case None          => detectAndCache(call)
                     }
                 }
             }

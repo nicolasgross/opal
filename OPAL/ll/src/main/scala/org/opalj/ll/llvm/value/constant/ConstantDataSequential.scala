@@ -10,7 +10,6 @@ import org.bytedeco.javacpp.SizeTPointer
 
 import scala.collection.mutable.ListBuffer
 
-
 abstract class ConstantDataSequential(ref: LLVMValueRef) extends User(ref) {
     def asString: String = LLVMGetAsString(ref, new SizeTPointer(1)).getString
 

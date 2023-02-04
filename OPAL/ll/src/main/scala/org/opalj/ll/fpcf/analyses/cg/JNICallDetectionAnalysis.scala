@@ -23,7 +23,7 @@ object JNICallDetectionAnalysis {
         print(func)
         implicit val declaredMethods: DeclaredMethods = project.get(DeclaredMethodsKey)
 
-         resolveJNIFunction(call, project) match {
+        resolveJNIFunction(call, project) match {
             case Some(Symbol("CallTypeMethod")) => resolveMethodId(call.operand(2), project) match { // methodID is the third parameter
                 case None =>
                     OPALLogger.warn(LogCategory, s"called method in JNI call could not be resolved: $call in ${call.function}")
@@ -39,17 +39,17 @@ object JNICallDetectionAnalysis {
             case load: Load => load
             case itp: IntToPtr => itp.convVal match {
                 case load: Load => load
-                case _ => return None
+                case _          => return None
             }
             case _ => return None
         }
 
         def matchJNIEnvIndex(index: Long): Option[Symbol] = index match {
             // https://docs.oracle.com/en/java/javase/13/docs/specs/jni/functions.html has the indices
-            case 31 => Some(Symbol("GetObjectClass"))
-            case 33 => Some(Symbol("GetMethodId"))
+            case 31                                  => Some(Symbol("GetObjectClass"))
+            case 33                                  => Some(Symbol("GetMethodId"))
             case index if index >= 34 && index <= 63 => Some(Symbol("CallTypeMethod")) // CallObjectMethod to CallVoidMethodA
-            case _ => None // unknown JNI function index or simply no JNI call
+            case _                                   => None // unknown JNI function index or simply no JNI call
         }
 
         def matchBinOpOperand(operand: Value): Option[Symbol] = {
@@ -66,7 +66,7 @@ object JNICallDetectionAnalysis {
             case itp: IntToPtr =>
                 itp.convVal match {
                     case binOp: BinaryOperation => matchBinOpOperand(binOp.op2) match {
-                        case None => matchBinOpOperand(binOp.op1)
+                        case None  => matchBinOpOperand(binOp.op1)
                         case index => index
                     }
                     case _ => None
@@ -89,7 +89,7 @@ object JNICallDetectionAnalysis {
         case load: Load => closestStoreToLoad(load) match {
             case Some(store) => store.src match {
                 case call: Call => Some(call)
-                case _ => None
+                case _          => None
             }
             case None => None
         }
@@ -99,14 +99,14 @@ object JNICallDetectionAnalysis {
     private def resolveMethodId(methodId: Value, project: SomeProject)(implicit declaredMethods: DeclaredMethods): Option[Set[Method]] = {
         val getMethodIDCall = getOriginCall(methodId) match {
             case Some(call) => call
-            case None => return None
+            case None       => return None
         }
         val jniFunction = resolveJNIFunction(getMethodIDCall, project)
         if (jniFunction.isEmpty || jniFunction.get != Symbol("GetMethodId")) return None
         val clazz = resolveClass(getMethodIDCall.operand(1), project) match { // class is the second parameter
             case Some(clazz) if clazz.isEmpty => None // class name could not be recovered
-            case Some(clazz) => Some(clazz) // class name was recovered
-            case None => return None // seems not to be a JNI call
+            case Some(clazz)                  => Some(clazz) // class name was recovered
+            case None                         => return None // seems not to be a JNI call
         }
 
         val name = resolveString(getMethodIDCall.operand(2)) // name is the third parameter
@@ -131,7 +131,7 @@ object JNICallDetectionAnalysis {
                         case mcsemaAllSegments: ConstantStruct => mcsemaAllSegments.getIndex(gep.constants(1).toInt) match {
                             case struct: ConstantStruct => struct.getIndex(gep.constants(2).toInt) match {
                                 case data: ConstantDataArray => data.subSeqAsString(gep.constants(3).toInt)
-                                case _ => None
+                                case _                       => None
                             }
                             case _ => None
                         }
@@ -162,14 +162,13 @@ object JNICallDetectionAnalysis {
         // TODO resolve static native calls, second arg of JNI function caller is class not this
     }
 
-
     private def resolveValueIsSecondArg(obj: Value): Boolean = obj match {
         // in compiled LLVM IR, obj could be tracked to the function's args
         // not trivially possible in McSema lifted code, where args are passed via state struct
         case load: Load => closestStoreToLoad(load) match {
             case Some(store) => store.src match {
                 case arg: Argument if arg.index == 1 => true
-                case _ => false
+                case _                               => false
             }
             case None => false
         }
@@ -179,7 +178,7 @@ object JNICallDetectionAnalysis {
     private def findJavaMethod(classFqn: Option[String], methodName: String, signature: String)(implicit declaredMethods: DeclaredMethods): Option[Set[Method]] = {
         val foundMethods = declaredMethods.declaredMethods.filter(declaredMethod => {
             val classType = declaredMethod.declaringClassType
-            ((classFqn.isDefined && classType.fqn == classFqn.get) || classFqn.isEmpty)&&
+            ((classFqn.isDefined && classType.fqn == classFqn.get) || classFqn.isEmpty) &&
                 declaredMethod.name == methodName &&
                 declaredMethod.descriptor.toJVMDescriptor == signature
         }).map(_.definedMethod).toSet

@@ -29,7 +29,7 @@ abstract class NativeICFG(project: SomeProject) extends ICFG[NativeFunction, LLV
             case function: Function => Set(LLVMFunction(function))
             case _ => jniCallDetection(call) match {
                 case Some(methods) => methods.map(JNIMethod)
-                case None => Set.empty
+                case None          => Set.empty
             }
         }
     }

@@ -24,10 +24,11 @@ class SimpleNativeBackwardTaintProblem(p: SomeProject) extends NativeBackwardTai
         sinkFuncs.map(sinkFunc =>
             if (McSemaUtil.isMcSemaStateType(sinkFunc.argument(0).typ)) {
                 // args are passed via state struct in McSema sub_... functions
-                (LLVMFunction(sinkFunc), new IFDSFact(NativeArrayElement(sinkFunc.argument(0),
-                    McSemaUtil.getFirstArgRegIndices(sinkFunc.module.targetTriple))))
-            } else (LLVMFunction(sinkFunc), new IFDSFact(NativeVariable(sinkFunc.argument(0))))
-        )
+                (LLVMFunction(sinkFunc), new IFDSFact(NativeArrayElement(
+                    sinkFunc.argument(0),
+                    McSemaUtil.getFirstArgRegIndices(sinkFunc.module.targetTriple)
+                )))
+            } else (LLVMFunction(sinkFunc), new IFDSFact(NativeVariable(sinkFunc.argument(0)))))
     }
 
     /**
@@ -51,7 +52,8 @@ class SimpleNativeBackwardTaintProblem(p: SomeProject) extends NativeBackwardTai
             case NativeVariable(value) if (value == call.instruction || McSemaUtil.mcSemaRetvalTainted(call, in)(p)) &&
                 !unbCallChain.contains(call.callable) => Some(NativeFlowFact(unbCallChain.prepended(call.callable)))
             case _ => None
-        } else None
+        }
+        else None
     }
 
     override def createFlowFactAtExit(callee: NativeFunction, in: NativeTaintFact,
