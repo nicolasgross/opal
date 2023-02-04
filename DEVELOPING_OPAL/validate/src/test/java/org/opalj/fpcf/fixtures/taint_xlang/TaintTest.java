@@ -4,6 +4,7 @@ package org.opalj.fpcf.fixtures.taint_xlang;
 import org.opalj.fpcf.properties.taint_xlang.XlangBackwardFlowPath;
 import org.opalj.fpcf.properties.taint_xlang.XlangForwardFlowPath;
 import org.opalj.fpcf.properties.taint_xlang.XlangMcSemaBackwardFlowPath;
+import org.opalj.fpcf.properties.taint_xlang.XlangMcSemaForwardFlowPath;
 
 /**
  * Add VM argument to run main: -Djava.library.path=DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint
@@ -54,6 +55,7 @@ public class TaintTest {
 
         @XlangForwardFlowPath({"test_java_flow", "sink"})
         @XlangBackwardFlowPath({"test_java_flow", "sink"})
+        @XlangMcSemaForwardFlowPath({"test_java_flow", "sink"})
         @XlangMcSemaBackwardFlowPath({"test_java_flow", "sink"})
         public void test_java_flow() {
             System.out.println("java");
@@ -63,6 +65,7 @@ public class TaintTest {
 
         @XlangForwardFlowPath({})
         @XlangBackwardFlowPath({})
+        @XlangMcSemaForwardFlowPath({})
         @XlangMcSemaBackwardFlowPath({})
         public void test_java_sanitize_no_flow() {
             System.out.println("java sanitize");
@@ -72,6 +75,7 @@ public class TaintTest {
 
         @XlangForwardFlowPath({})
         @XlangBackwardFlowPath({})
+        @XlangMcSemaForwardFlowPath({})
         @XlangMcSemaBackwardFlowPath({})
         public void test_java_untainted_no_flow() {
             System.out.println("java untainted");
@@ -81,6 +85,7 @@ public class TaintTest {
 
         @XlangForwardFlowPath({"test_native_sum_flow", "sink"})
         @XlangBackwardFlowPath({"test_native_sum_flow", "sink"})
+        @XlangMcSemaForwardFlowPath({"test_native_sum_flow", "sink"})
         @XlangMcSemaBackwardFlowPath({"test_native_sum_flow", "sink"})
         public void test_native_sum_flow() {
             System.out.println("native sum");
@@ -92,6 +97,7 @@ public class TaintTest {
 
         @XlangForwardFlowPath({"test_native_to_java_to_native_flow", "Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1sink", "sink"})
         @XlangBackwardFlowPath({"test_native_to_java_to_native_flow", "Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1sink", "sink"})
+        @XlangMcSemaForwardFlowPath({"test_native_to_java_to_native_flow", "Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1sink", "sub_1ff011f0_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1sink", "sub_1ff01060__sink"})
         @XlangMcSemaBackwardFlowPath({"test_native_to_java_to_native_flow", "Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1sink", "sub_1ff011f0_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1sink", "sub_1ff01060__sink"})
         public void test_native_to_java_to_native_flow() {
             System.out.println("native to java to native");
@@ -101,6 +107,7 @@ public class TaintTest {
 
         @XlangForwardFlowPath({})
         @XlangBackwardFlowPath({})
+        @XlangMcSemaForwardFlowPath({})
         @XlangMcSemaBackwardFlowPath({})
         public void test_native_to_java_to_native_sanitized_no_flow() {
             System.out.println("native to java to native sanitized");
@@ -109,6 +116,7 @@ public class TaintTest {
 
         @XlangForwardFlowPath({})
         @XlangBackwardFlowPath({})
+        @XlangMcSemaForwardFlowPath({})
         @XlangMcSemaBackwardFlowPath({})
         public void test_native_indirect_sanitized_no_flow() {
             System.out.println("native indirect sanitized");
@@ -119,6 +127,7 @@ public class TaintTest {
 
         @XlangForwardFlowPath({"test_native_indirect_flow", "sink"})
         @XlangBackwardFlowPath({"test_native_indirect_flow", "sink"})
+        @XlangMcSemaForwardFlowPath({"test_native_indirect_flow", "sink"})
         @XlangMcSemaBackwardFlowPath({"test_native_indirect_flow", "sink"})
         public void test_native_indirect_flow() {
             System.out.println("native indirect");
@@ -129,6 +138,7 @@ public class TaintTest {
 
         @XlangForwardFlowPath({"test_native_identity_flow", "Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1identity_1to_1sink", "sink"})
         @XlangBackwardFlowPath({"test_native_identity_flow", "Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1identity_1to_1sink", "sink"})
+        @XlangMcSemaForwardFlowPath({"test_native_identity_flow", "Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1identity_1to_1sink", "sub_1ff01290_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1identity_1to_1sink", "sub_1ff01060__sink"})
         @XlangMcSemaBackwardFlowPath({"test_native_identity_flow", "Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1identity_1to_1sink", "sub_1ff01290_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1identity_1to_1sink", "sub_1ff01060__sink"})
         public void test_native_identity_flow() {
             System.out.println("native identity");
@@ -137,6 +147,7 @@ public class TaintTest {
 
         @XlangForwardFlowPath({})
         @XlangBackwardFlowPath({})
+        @XlangMcSemaForwardFlowPath({})
         @XlangMcSemaBackwardFlowPath({})
         public void test_native_zero_no_flow() {
             System.out.println("native zero");
@@ -145,6 +156,7 @@ public class TaintTest {
 
         @XlangForwardFlowPath({"test_native_array_tainted_flow", "Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_native_1array_1tainted", "sink"})
         @XlangBackwardFlowPath({"test_native_array_tainted_flow", "Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_native_1array_1tainted", "sink"})
+        @XlangMcSemaForwardFlowPath({"test_native_array_tainted_flow", "Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_native_1array_1tainted", "sub_1ff01310_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_native_1array_1tainted", "sub_1ff01060__sink"})
         @XlangMcSemaBackwardFlowPath({"test_native_array_tainted_flow", "Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_native_1array_1tainted", "sub_1ff01310_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_native_1array_1tainted", "sub_1ff01060__sink"})
         public void test_native_array_tainted_flow() {
             System.out.println("native array tainted");
@@ -153,6 +165,7 @@ public class TaintTest {
 
         @XlangForwardFlowPath({})
         @XlangBackwardFlowPath({})
+        @XlangMcSemaForwardFlowPath({})
         @XlangMcSemaBackwardFlowPath({})
         public void test_native_array_untainted_no_flow() {
             System.out.println("native array untainted");
@@ -161,6 +174,7 @@ public class TaintTest {
 
         @XlangForwardFlowPath({"test_native_call_java_sink_flow", "Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1to_1java_1sink", "indirect_sink", "sink"})
         @XlangBackwardFlowPath({"test_native_call_java_sink_flow", "Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1to_1java_1sink", "indirect_sink", "sink"})
+        @XlangMcSemaForwardFlowPath({"test_native_call_java_sink_flow", "Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1to_1java_1sink", "sub_1ff01390_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1to_1java_1sink", "indirect_sink", "sink"})
         @XlangMcSemaBackwardFlowPath({"test_native_call_java_sink_flow", "Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1to_1java_1sink", "sub_1ff01390_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1to_1java_1sink", "indirect_sink", "sink"})
         public void test_native_call_java_sink_flow() {
             System.out.println("native call java sink");
@@ -169,6 +183,7 @@ public class TaintTest {
 
         @XlangForwardFlowPath({"test_native_call_java_source_flow", "sink"})
         @XlangBackwardFlowPath({"test_native_call_java_source_flow", "sink"})
+        @XlangMcSemaForwardFlowPath({"test_native_call_java_source_flow", "sink"})
         @XlangMcSemaBackwardFlowPath({"test_native_call_java_source_flow", "sink"})
         public void test_native_call_java_source_flow() {
             System.out.println("native call java source");
@@ -177,6 +192,7 @@ public class TaintTest {
 
         @XlangForwardFlowPath({})
         @XlangBackwardFlowPath({})
+        @XlangMcSemaForwardFlowPath({})
         @XlangMcSemaBackwardFlowPath({})
         public void test_native_call_java_sanitize_no_flow() {
             System.out.println("native call java sanitize");
