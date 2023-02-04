@@ -17,7 +17,7 @@ import org.opalj.tac.fpcf.analyses.ifds.taint.{FlowFact, TaintFact}
 import org.scalatest.funspec.AnyFunSpec
 import org.scalatest.matchers.should.Matchers
 
-class CrossLanguageForwardTaintAnalysisTest extends AnyFunSpec with Matchers {
+abstract class AbstractCrossLanguageForwardTaintAnalysisTest(llvmModule: String) extends AnyFunSpec with Matchers {
     describe("CrossLanguageForwardTaintAnalysis") {
         implicit val config = BaseConfig.withValue(ifds.ConfigKeyPrefix+"debug", ConfigValueFactory.fromAnyRef(true))
         val project =
@@ -28,9 +28,7 @@ class CrossLanguageForwardTaintAnalysisTest extends AnyFunSpec with Matchers {
             )
 
         project.updateProjectInformationKeyInitializationData(LLVMProjectKey)(
-            current => List("./DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/TaintTest.ll")
-            //current => List("./DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/lifted_mcsema.ll")
-            //current => List("./DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/lifted_retdec.ll")
+            current => List(llvmModule)
         )
         project.get(LLVMProjectKey)
         project.get(RTACallGraphKey)
@@ -75,3 +73,11 @@ class CrossLanguageForwardTaintAnalysisTest extends AnyFunSpec with Matchers {
         }
     }
 }
+class CrossLanguageForwardTaintAnalysisTest extends AbstractCrossLanguageForwardTaintAnalysisTest(
+    "./DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/TaintTest.ll")
+
+class CrossLanguageMcSemaForwardTaintAnalysisTest extends AbstractCrossLanguageForwardTaintAnalysisTest(
+    "./DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/lifted_mcsema.ll")
+
+class CrossLanguageRetdecForwardTaintAnalysisTest extends AbstractCrossLanguageForwardTaintAnalysisTest(
+    "./DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/lifted_retdec.ll")

@@ -25,7 +25,7 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
     override def needsPredecessor(statement: LLVMStatement): Boolean = false
 
     /**
-     * Taints the pointers that a value/pointer is casted from.
+     * Taints the pointers that a value/pointer is casted from. Important for McSema lifted code.
      */
     private def taintCastedPointer(value: Value): Set[NativeTaintFact] = value match {
         case convOp: ConversionOperation => convOp.convVal match {
