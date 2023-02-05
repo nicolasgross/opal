@@ -15,6 +15,8 @@ class SimpleNativeBackwardTaintProblem(p: SomeProject) extends NativeBackwardTai
     override val javaPropertyKey: PropertyKey[Taint] = Taint.key
     val llvmProject: LLVMProject = p.get(LLVMProjectKey)
 
+    override val ptrAliasDefinitions: Map[String, List[Set[String]]] = Map()
+
     /**
      * The analysis starts with the sink function.
      */

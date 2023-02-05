@@ -7,6 +7,9 @@ import org.opalj.br.fpcf.PropertyStoreKey
 import org.opalj.fpcf.{EOptionP, FinalEP, InterimEUBP, Property, PropertyKey, PropertyStore}
 import org.opalj.ifds.Dependees.Getter
 import org.opalj.ifds.{AbstractIFDSFact, Callable, IFDSFact, IFDSProblem, IFDSProperty}
+import org.opalj.ll.LLVMProjectKey
+import org.opalj.ll.fpcf.analyses.ifds.taint.NativeArrayElement
+import org.opalj.ll.llvm.value.{GetElementPtr, Instruction, Value}
 import org.opalj.tac.fpcf.analyses.ifds.{JavaICFG, JavaStatement}
 
 abstract class NativeForwardIFDSProblem[Fact <: AbstractIFDSFact, JavaFact <: AbstractIFDSFact](project: SomeProject)
@@ -82,4 +85,54 @@ abstract class NativeIFDSProblem[Fact <: AbstractIFDSFact, JavaFact <: AbstractI
         unbCallChain: Seq[Callable],
         successor:    Option[LLVMStatement]
     ): Set[Fact]
+
+    /**
+     * TODO Hardcoded aliases, must be replaced by an alias analysis.
+     *
+     * Aliases are stored in following format: foo => List((%12, %14), (%18, %26)),
+     * Function foo has following aliases: %12 and %14 as well as %18 and %26.
+     */
+    val ptrAliasDefinitions: Map[String, List[Set[String]]] = Map()
+
+    private lazy val ptrAliasesParsed: Map[LLVMFunction, List[Set[Value]]] = {
+        def getInstrStartingWith(start: String, function: LLVMFunction): Option[Instruction] = {
+            for (bb <- function.function.basicBlocks) {
+                for (instr <- bb.instructions) {
+                    if (instr.repr.trim.startsWith(start)) return Some(instr)
+                }
+            }
+            None
+        }
+        val llvmProject = project.get(LLVMProjectKey)
+        ptrAliasDefinitions.map {
+            case (fname, list) =>
+                val func = LLVMFunction(llvmProject.function(fname).get)
+                (func, list.map(aliases => aliases.map(alias => getInstrStartingWith(alias, func).get)))
+        }
+    }
+
+    /**
+     * Get pointer aliases for a NativeArrayElement taint fact. Necessary for following case:
+     * Callee returns a tainted array element with the base being an argument of the caller that was passed to the callee.
+     * All variables in the caller must be tainted that are a GetElementPtr with same base and indices.
+     */
+    protected def getPtrAliases(fact: NativeArrayElement, function: LLVMFunction): Set[Value] = {
+        val gep = function.function.basicBlocks.flatMap(_.instructions).find {
+            case gep: GetElementPtr if gep.base == fact.base && gep.isConstant && gep.constants == fact.indices => true
+            case _ => false
+        }
+        if (gep.isDefined) getPtrAliases(gep.get, function)
+        else Set.empty
+    }
+
+    /**
+     * Get pointer aliases for a value.
+     */
+    protected def getPtrAliases(ptr: Value, function: LLVMFunction): Set[Value] =
+        ptrAliasesParsed.get(function) match {
+            case Some(list) =>
+                list.foreach(aliases => if (aliases.contains(ptr)) return aliases)
+                Set.empty
+            case None => Set.empty
+        }
 }

@@ -5,13 +5,14 @@ import org.opalj.br.analyses.Project
 import org.opalj.fpcf.PropertiesTest
 import org.opalj.fpcf.properties.taint_xlang.{XlangForwardFlowPath, XlangMcSemaForwardFlowPath}
 import org.opalj.ifds.IFDSFact
-import org.opalj.ll.fpcf.analyses.ifds.taint.{JavaForwardTaintAnalysisScheduler, NativeForwardTaintAnalysisScheduler}
+import org.opalj.ll.fpcf.analyses.ifds.NativeIFDSAnalysisScheduler
+import org.opalj.ll.fpcf.analyses.ifds.taint.{JavaForwardTaintAnalysisScheduler, NativeForwardTaintAnalysisScheduler, NativeMcSemaForwardTaintAnalysisScheduler, NativeTaintFact}
 import org.opalj.tac.cg.RTACallGraphKey
 import org.opalj.tac.fpcf.analyses.ifds.taint.TaintNullFact
 
 import java.net.URL
 
-abstract class AbstractCrossLanguageForwardTaintAnalysisTest(llvmModule: String, validator: String) extends PropertiesTest {
+abstract class AbstractCrossLanguageForwardTaintAnalysisTest(llvmModule: String, validator: String, nativeScheduler: NativeIFDSAnalysisScheduler[NativeTaintFact]) extends PropertiesTest {
     override def init(p: Project[URL]): Unit = {
         p.updateProjectInformationKeyInitializationData(LLVMProjectKey)(
             current => List(llvmModule)
@@ -21,7 +22,7 @@ abstract class AbstractCrossLanguageForwardTaintAnalysisTest(llvmModule: String,
     }
 
     describe("CrossLanguageForwardTaintAnalysis") {
-        val testContext = executeAnalyses(JavaForwardTaintAnalysisScheduler, NativeForwardTaintAnalysisScheduler)
+        val testContext = executeAnalyses(JavaForwardTaintAnalysisScheduler, nativeScheduler)
         val project = testContext.project
         val eas = methodsWithAnnotations(project)
             .filter(_._1.classFile.thisType.fqn == "org/opalj/fpcf/fixtures/taint_xlang/TaintTest")
@@ -36,15 +37,18 @@ abstract class AbstractCrossLanguageForwardTaintAnalysisTest(llvmModule: String,
 
 class CrossLanguageForwardTaintAnalysisTest extends AbstractCrossLanguageForwardTaintAnalysisTest(
     "./DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/TaintTest.ll",
-    XlangForwardFlowPath.PROPERTY_VALIDATOR_KEY
+    XlangForwardFlowPath.PROPERTY_VALIDATOR_KEY,
+    NativeForwardTaintAnalysisScheduler
 )
 
 class CrossLanguageMcSemaForwardTaintAnalysisTest extends AbstractCrossLanguageForwardTaintAnalysisTest(
     "./DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/lifted_mcsema.ll",
-    XlangMcSemaForwardFlowPath.PROPERTY_VALIDATOR_KEY
+    XlangMcSemaForwardFlowPath.PROPERTY_VALIDATOR_KEY,
+    NativeMcSemaForwardTaintAnalysisScheduler
 )
 
 class CrossLanguageRetdecForwardTaintAnalysisTest extends AbstractCrossLanguageForwardTaintAnalysisTest(
     "./DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/lifted_retdec.ll",
-    XlangForwardFlowPath.PROPERTY_VALIDATOR_KEY
+    XlangForwardFlowPath.PROPERTY_VALIDATOR_KEY,
+    NativeForwardTaintAnalysisScheduler
 )

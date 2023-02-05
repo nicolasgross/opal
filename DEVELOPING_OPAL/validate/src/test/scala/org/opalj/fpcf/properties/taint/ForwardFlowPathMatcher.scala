@@ -38,7 +38,7 @@ abstract class AbstractForwardFlowPathMatcher(pk: PropertyKey[_ <: Property]) ex
             None
         } else {
             if (flows.contains(expectedFlow)) None
-            else Some(expectedFlow.mkString(", ")+"\nactual: "+flows.mkString(", "))
+            else Some(expectedFlow.mkString(", "))
         }
     }
 }
