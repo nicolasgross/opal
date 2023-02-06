@@ -10,12 +10,12 @@ import org.opalj.ll.fpcf.analyses.ifds.{LLVMFunction, LLVMStatement, McSemaUtil,
 import org.opalj.ll.fpcf.properties.NativeTaint
 import org.opalj.tac.fpcf.properties.Taint
 
-class SimpleNativeBackwardTaintProblem(p: SomeProject) extends NativeBackwardTaintProblem(p) {
+class SimpleNativeBackwardTaintProblem(ptrAliasDefs: Map[String, List[Set[String]]], p: SomeProject) extends NativeBackwardTaintProblem(p) {
 
     override val javaPropertyKey: PropertyKey[Taint] = Taint.key
     val llvmProject: LLVMProject = p.get(LLVMProjectKey)
 
-    override val ptrAliasDefinitions: Map[String, List[Set[String]]] = Map()
+    override val ptrAliasDefinitions: Map[String, List[Set[String]]] = ptrAliasDefs
 
     /**
      * The analysis starts with the sink function.
@@ -63,10 +63,26 @@ class SimpleNativeBackwardTaintProblem(p: SomeProject) extends NativeBackwardTai
 }
 
 class SimpleNativeBackwardTaintAnalysis(project: SomeProject)
-    extends NativeIFDSAnalysis(project, new SimpleNativeBackwardTaintProblem(project), NativeTaint)
+    extends NativeIFDSAnalysis(project, new SimpleNativeBackwardTaintProblem(Map(), project), NativeTaint)
+
+class SimpleNativeMcSemaBackwardTaintAnalysis(project: SomeProject)
+    extends NativeIFDSAnalysis(project, new SimpleNativeBackwardTaintProblem(Map(
+        "sub_1ff012d0_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1zero_1to_1sink" ->
+            List(Set("%RAX_ptr", "%EAX_ptr")),
+        "sub_1ff01290_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1identity_1to_1sink" ->
+            List(Set("%RAX_ptr", "%EAX_ptr")),
+        "sub_1ff01250_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_sanitize_1only_1a_1into_1sink" ->
+            List(Set("%33", "%42", "%75")),
+    ), project), NativeTaint)
 
 object NativeBackwardTaintAnalysisScheduler extends NativeIFDSAnalysisScheduler[NativeTaintFact] {
     override def init(p: SomeProject, ps: PropertyStore) = new SimpleNativeBackwardTaintAnalysis(p)
+    override def property: IFDSPropertyMetaInformation[LLVMStatement, NativeTaintFact] = NativeTaint
+    override val uses: Set[PropertyBounds] = Set()
+    override def requiredProjectInformation: ProjectInformationKeys = SimpleNativeCallGraphKey +: super.requiredProjectInformation
+}
+object NativeMcSemaBackwardTaintAnalysisScheduler extends NativeIFDSAnalysisScheduler[NativeTaintFact] {
+    override def init(p: SomeProject, ps: PropertyStore) = new SimpleNativeMcSemaBackwardTaintAnalysis(p)
     override def property: IFDSPropertyMetaInformation[LLVMStatement, NativeTaintFact] = NativeTaint
     override val uses: Set[PropertyBounds] = Set()
     override def requiredProjectInformation: ProjectInformationKeys = SimpleNativeCallGraphKey +: super.requiredProjectInformation

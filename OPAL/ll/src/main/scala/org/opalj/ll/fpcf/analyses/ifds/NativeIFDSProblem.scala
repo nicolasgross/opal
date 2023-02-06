@@ -9,7 +9,7 @@ import org.opalj.ifds.Dependees.Getter
 import org.opalj.ifds.{AbstractIFDSFact, Callable, IFDSFact, IFDSProblem, IFDSProperty}
 import org.opalj.ll.LLVMProjectKey
 import org.opalj.ll.fpcf.analyses.ifds.taint.NativeArrayElement
-import org.opalj.ll.llvm.value.{GetElementPtr, Instruction, Value}
+import org.opalj.ll.llvm.value.{Call, GetElementPtr, Instruction, Value}
 import org.opalj.tac.fpcf.analyses.ifds.{JavaICFG, JavaStatement}
 
 abstract class NativeForwardIFDSProblem[Fact <: AbstractIFDSFact, JavaFact <: AbstractIFDSFact](project: SomeProject)
@@ -128,11 +128,31 @@ abstract class NativeIFDSProblem[Fact <: AbstractIFDSFact, JavaFact <: AbstractI
     /**
      * Get pointer aliases for a value.
      */
-    protected def getPtrAliases(ptr: Value, function: LLVMFunction): Set[Value] =
+    protected def getPtrAliases(ptr: Value, function: LLVMFunction): Set[Value] = {
+        // get alias instructions/variables
         ptrAliasesParsed.get(function) match {
             case Some(list) =>
                 list.foreach(aliases => if (aliases.contains(ptr)) return aliases - ptr)
                 Set.empty
             case None => Set.empty
         }
+    }
+
+    /**
+     * Returns the index of the argument that a value or one of its aliases corresponds to.
+     */
+    protected def indexOfAliasedArg(value: Value, callInstr: Call, function: LLVMFunction): Option[Int] = {
+        val aliases = getPtrAliases(value, function) + value
+        aliases.foreach {
+            case gep: GetElementPtr => callInstr.indexOfArgument(gep.base) match {
+                case Some(index) => return Some(index)
+                case None        =>
+            }
+            case alias => callInstr.indexOfArgument(alias) match {
+                case Some(index) => return Some(index)
+                case None        =>
+            }
+        }
+        None
+    }
 }

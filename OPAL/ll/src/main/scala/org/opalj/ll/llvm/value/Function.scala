@@ -24,6 +24,12 @@ case class Function(ref: LLVMValueRef) extends Value(ref) {
         assert(index < argumentCount)
         Argument(LLVMGetParam(ref, index), index)
     }
+    def argument(value: Value): Option[Int] = {
+        arguments.indexOf(value) match {
+            case -1    => None
+            case index => Some(index)
+        }
+    }
 
     def entryBlock: BasicBlock = {
         if (basicBlockCount == 0) throw new IllegalStateException("this function does not contain any basic block and may not be defined")
