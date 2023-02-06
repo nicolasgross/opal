@@ -34,8 +34,8 @@ class SimpleNativeForwardTaintProblem(ptrAliasDefs: Map[String, List[Set[String]
         else if (McSemaUtil.matchesMcSemaFunctionName(callee.name, "source"))
             Set(NativeArrayElement(
                 call.instruction.asInstanceOf[Call].argument(0).get, // state struct
-                McSemaUtil.getReturnRegIndices(callee.function.module.targetTriple)
-            )) // return reg indices
+                McSemaUtil.getReturnRegIndices(callee.function.module.targetTriple) // return reg indices
+            ))
         else Set.empty
 
     override protected def createFlowFact(call: LLVMStatement, in: NativeTaintFact): Option[NativeFlowFact] = {

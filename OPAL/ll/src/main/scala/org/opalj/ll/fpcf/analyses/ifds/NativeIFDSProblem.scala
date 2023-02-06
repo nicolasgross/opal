@@ -107,21 +107,21 @@ abstract class NativeIFDSProblem[Fact <: AbstractIFDSFact, JavaFact <: AbstractI
         ptrAliasDefinitions.map {
             case (fname, list) =>
                 val func = LLVMFunction(llvmProject.function(fname).get)
-                (func, list.map(aliases => aliases.map(alias => getInstrStartingWith(alias, func).get)))
+                (func, list.map(aliases => aliases.map(getInstrStartingWith(_, func).get)))
         }
     }
 
     /**
      * Get pointer aliases for a NativeArrayElement taint fact. Necessary for following case:
-     * Callee returns a tainted array element with the base being an argument of the caller that was passed to the callee.
+     * Callee returns a tainted array element with the base being a variable in the caller that was passed to the callee.
      * All variables in the caller must be tainted that are a GetElementPtr with same base and indices.
      */
-    protected def getPtrAliases(fact: NativeArrayElement, function: LLVMFunction): Set[Value] = {
+    protected def getPtrAliasesForArrElem(fact: NativeArrayElement, function: LLVMFunction): Set[Value] = {
         val gep = function.function.basicBlocks.flatMap(_.instructions).find {
             case gep: GetElementPtr if gep.base == fact.base && gep.isConstant && gep.constants == fact.indices => true
             case _ => false
         }
-        if (gep.isDefined) getPtrAliases(gep.get, function)
+        if (gep.isDefined) getPtrAliases(gep.get, function) + gep.get
         else Set.empty
     }
 
@@ -131,7 +131,7 @@ abstract class NativeIFDSProblem[Fact <: AbstractIFDSFact, JavaFact <: AbstractI
     protected def getPtrAliases(ptr: Value, function: LLVMFunction): Set[Value] =
         ptrAliasesParsed.get(function) match {
             case Some(list) =>
-                list.foreach(aliases => if (aliases.contains(ptr)) return aliases)
+                list.foreach(aliases => if (aliases.contains(ptr)) return aliases - ptr)
                 Set.empty
             case None => Set.empty
         }

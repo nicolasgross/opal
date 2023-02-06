@@ -6,7 +6,7 @@ import org.opalj.br.analyses.SomeProject
 import org.opalj.ifds.Callable
 import org.opalj.ll.fpcf.analyses.ifds._
 import org.opalj.ll.llvm.PointerType
-import org.opalj.ll.llvm.value.{Alloca, Argument, BinaryOperation, Call, ConversionOperation, GetElementPtr, Load, PHI, Ret, Store}
+import org.opalj.ll.llvm.value.{Alloca, Argument, BinaryOperation, Call, ConversionOperation, GetElementPtr, Load, PHI, Ret, Store, Value}
 import org.opalj.tac.ReturnValue
 import org.opalj.tac.fpcf.analyses.ifds.taint._
 import org.opalj.tac.fpcf.analyses.ifds.{JavaForwardICFG, JavaIFDSProblem, JavaStatement}
@@ -154,10 +154,9 @@ abstract class NativeForwardTaintProblem(project: SomeProject)
             case _ =>
         }
 
-        flows ++= flows.filter(_.isInstanceOf[NativeArrayElement])
+        flows ++ flows.filter(_.isInstanceOf[NativeArrayElement])
             .map(_.asInstanceOf[NativeArrayElement])
-            .flatMap(arrElem => getPtrAliases(arrElem, call.function).map(NativeVariable))
-        flows
+            .flatMap(arrElem => getPtrAliasesForArrElem(arrElem, call.function).map(NativeVariable))
     }
 
     /**
@@ -169,9 +168,41 @@ abstract class NativeForwardTaintProblem(project: SomeProject)
      *         under the assumption that `in` held before `call`.
      */
     override def callToReturnFlow(call: LLVMStatement, in: NativeTaintFact, successor: Option[LLVMStatement],
-                                  unbCallChain: Seq[Callable]): Set[NativeTaintFact] = createFlowFact(call, in) match {
-        case Some(fact) => Set(in, fact)
-        case None       => Set(in)
+                                  unbCallChain: Seq[Callable]): Set[NativeTaintFact] = {
+        val callInstr = call.instruction.asInstanceOf[Call]
+
+        def indexOfAliasedArg(tainted: Value, function: LLVMFunction): Option[Int] = {
+            val aliases = getPtrAliases(tainted, function) + tainted
+            for (alias <- aliases) {
+                callInstr.indexOfArgument(alias) match {
+                    case Some(index) => return Some(index)
+                    case None        =>
+                }
+            }
+            None
+        }
+
+        // tainted pointer values passed to callee are not propagated via callToReturn flow
+        // instead, they are propagated via call flow and return flow because they might not be valid anymore after the call
+        val propagatedIn: Set[NativeTaintFact] = in match {
+            case NativeVariable(value) => indexOfAliasedArg(value, call.function) match {
+                case Some(index) => callInstr.argument(index).get.typ match {
+                    case PointerType(_) => Set.empty
+                    case _              => Set(in)
+                }
+                case None => Set(in)
+            }
+            case NativeArrayElement(base, _) => indexOfAliasedArg(base, call.function) match {
+                case Some(_) => Set.empty // array elem base is always a pointer
+                case None    => Set(in)
+            }
+            case _ => Set(in)
+        }
+
+        createFlowFact(call, in) match {
+            case Some(fact) => propagatedIn + fact
+            case None       => propagatedIn
+        }
     }
 
     override def needsPredecessor(statement: LLVMStatement): Boolean = statement.instruction match {
