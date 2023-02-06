@@ -216,12 +216,31 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
 
     override def callToReturnFlow(call: LLVMStatement, in: NativeTaintFact, successor: Option[LLVMStatement],
                                   unbCallChain: Seq[Callable]): Set[NativeTaintFact] = {
-        // TODO do not propagate pointer args
+        val callInstr = call.instruction.asInstanceOf[Call]
+
+        // tainted pointer values passed to callee are not propagated via callToReturn flow
+        // instead, they are propagated via call flow and return flow because they might not be valid anymore after the call
+        val propagatedIn: Set[NativeTaintFact] = in match {
+            case NativeVariable(value) => indexOfAliasedArg(value, callInstr, call.function) match {
+                case Some(index) => callInstr.argument(index).get.typ match {
+                    case PointerType(_) => Set.empty
+                    case _              => Set(in)
+                }
+                case None => Set(in)
+            }
+            case NativeArrayElement(base, _) => indexOfAliasedArg(base, callInstr, call.function) match {
+                case Some(_) => Set.empty // array elem base is always a pointer
+                case None    => Set(in)
+            }
+            case _ => Set(in)
+        }
+
+        var result: Set[NativeTaintFact] = Set.empty
+        if (!sanitizesParameter(call, in)) result ++= propagatedIn
+
         val flowFact = createFlowFactAtCall(call, in, unbCallChain)
-        val result = collection.mutable.Set.empty[NativeTaintFact]
-        if (!sanitizesParameter(call, in)) result.add(in)
-        if (flowFact.isDefined) result.add(flowFact.get)
-        result.toSet
+        if (flowFact.isDefined) result + flowFact.get
+        else result
     }
 
     override def outsideAnalysisContextUnbReturn(callee: NativeFunction): Option[OutsideAnalysisContextUnbReturnHandler] = {
