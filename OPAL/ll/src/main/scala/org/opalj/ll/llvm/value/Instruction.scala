@@ -108,6 +108,10 @@ sealed abstract class Instruction(ref: LLVMValueRef) extends User(ref) {
     def function: Function = parent.parent
     def next: Option[Instruction] = OptionalInstruction(LLVMGetNextInstruction(ref))
     def previous: Option[Instruction] = OptionalInstruction(LLVMGetPreviousInstruction(ref))
+    def allPrevious: Set[Instruction] = previous match {
+        case Some(instr) => instr.allPrevious + instr
+        case None        => Set.empty
+    }
 
     override def toString: String = {
         s"${this.getClass.getSimpleName}(${repr})"

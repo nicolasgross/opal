@@ -40,6 +40,8 @@ class IFDSFact[Fact <: AbstractIFDSFact, S <: Statement[_, _]](val fact: Fact, v
     override def hashCode(): Int = {
         64 * (fact.hashCode() + isUnbalancedReturn.hashCode() + callStmt.hashCode())
     }
+
+    override def toString: String = s"IFDSFact($fact, unbalanced return: $isUnbalancedReturn, call statement: $callStmt)"
 }
 
 case class Dependees[Work]() {
@@ -423,7 +425,7 @@ class IFDSAnalysis[Fact <: AbstractIFDSFact, C <: AnyRef, S <: Statement[_ <: C,
                     worklist.enqueue(selfDependee))
 
                 if (ifdsProblem.enableUnbalancedReturns && ifdsProblem.shouldPerformUnbalancedReturn(state.source)) {
-                    handleUnbalancedReturn(statement, in)
+                    handleUnbalancedReturn(statement, newEdge._2)
                 }
             }
         }

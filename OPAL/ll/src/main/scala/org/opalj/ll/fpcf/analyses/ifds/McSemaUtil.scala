@@ -23,17 +23,13 @@ object McSemaUtil {
      */
     def getReturnRegIndices(targetTriple: String): Seq[Long] = {
         if (targetTriple.startsWith("x86_64")) Seq(0, 6, 1, 0, 0) // indices of RAX in McSema state
-        else if (targetTriple.startsWith("x86")) ??? // TODO
-        else if (targetTriple.startsWith("aarch64")) ??? // TODO
-        else if (targetTriple.startsWith("arm")) ??? // TODO
+        else if (targetTriple.startsWith("aarch64")) Seq(0, 3, 1, 0, 0) // indices of X0 in McSema state
         else Seq.empty
     }
 
     def getFirstArgRegIndices(targetTriple: String): Seq[Long] = {
         if (targetTriple.startsWith("x86_64")) Seq(0, 6, 11, 0, 0) // indices of RDI in McSema state
-        else if (targetTriple.startsWith("x86")) ??? // TODO
-        else if (targetTriple.startsWith("aarch64")) ??? // TODO
-        else if (targetTriple.startsWith("arm")) ??? // TODO
+        else if (targetTriple.startsWith("aarch64")) Seq(0, 3, 1, 0, 0) // indices of X0 in McSema state
         else Seq.empty
     }
 

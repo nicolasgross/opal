@@ -3,11 +3,11 @@ package org.opalj.ll;
 
 import org.opalj.br.analyses.Project
 import org.opalj.fpcf.PropertiesTest
-import org.opalj.fpcf.properties.taint_xlang.{XlangBackwardFlowPath, XlangMcSemaBackwardFlowPath}
+import org.opalj.fpcf.properties.taint_xlang.{XlangMcSemaAarch64BackwardFlowPath, XlangBackwardFlowPath, XlangMcSemaX8664BackwardFlowPath}
 import org.opalj.ifds.IFDSFact
 import org.opalj.ll.fpcf.analyses.cg.SimpleNativeCallGraphKey
 import org.opalj.ll.fpcf.analyses.ifds.NativeIFDSAnalysisScheduler
-import org.opalj.ll.fpcf.analyses.ifds.taint.{JavaBackwardTaintAnalysisScheduler, NativeBackwardTaintAnalysisScheduler, NativeMcSemaBackwardTaintAnalysisScheduler, NativeTaintFact}
+import org.opalj.ll.fpcf.analyses.ifds.taint.{JavaBackwardTaintAnalysisScheduler, NativeMcSemaAarch64BackwardTaintAnalysisScheduler, NativeBackwardTaintAnalysisScheduler, NativeTaintFact, NativeMcSemaX8664BackwardTaintAnalysisScheduler}
 import org.opalj.tac.cg.RTACallGraphKey
 import org.opalj.tac.fpcf.analyses.ifds.taint.TaintNullFact
 
@@ -44,19 +44,25 @@ abstract class AbstractCrossLanguageBackwardTaintAnalysisTest(llvmModule: String
 }
 
 class CrossLanguageBackwardTaintAnalysisTest extends AbstractCrossLanguageBackwardTaintAnalysisTest(
-    "./DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/TaintTest.ll",
+    "./DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/x86_64/TaintTest.ll",
     XlangBackwardFlowPath.PROPERTY_VALIDATOR_KEY,
     NativeBackwardTaintAnalysisScheduler
 )
 
-class CrossLanguageMcSemaBackwardTaintAnalysisTest extends AbstractCrossLanguageBackwardTaintAnalysisTest(
-    "./DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/lifted_mcsema.ll",
-    XlangMcSemaBackwardFlowPath.PROPERTY_VALIDATOR_KEY,
-    NativeMcSemaBackwardTaintAnalysisScheduler
+class CrossLanguageMcSemaX8664BackwardTaintAnalysisTest extends AbstractCrossLanguageBackwardTaintAnalysisTest(
+    "./DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/x86_64/lifted_mcsema.ll",
+    XlangMcSemaX8664BackwardFlowPath.PROPERTY_VALIDATOR_KEY,
+    NativeMcSemaX8664BackwardTaintAnalysisScheduler
 )
 
-class CrossLanguageRetdecBackwardTaintAnalysisTest extends AbstractCrossLanguageBackwardTaintAnalysisTest(
-    "./DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/lifted_retdec.ll",
+class CrossLanguageMcSemaAarch64BackwardTaintAnalysisTest extends AbstractCrossLanguageBackwardTaintAnalysisTest(
+    "./DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/aarch64/lifted_mcsema.ll",
+    XlangMcSemaAarch64BackwardFlowPath.PROPERTY_VALIDATOR_KEY,
+    NativeMcSemaAarch64BackwardTaintAnalysisScheduler
+)
+
+class CrossLanguageRetdecX8664BackwardTaintAnalysisTest extends AbstractCrossLanguageBackwardTaintAnalysisTest(
+    "./DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/x86_64/lifted_retdec.ll",
     XlangBackwardFlowPath.PROPERTY_VALIDATOR_KEY,
     NativeBackwardTaintAnalysisScheduler
 )

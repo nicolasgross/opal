@@ -26,11 +26,8 @@ class SimpleNativeBackwardTaintProblem(ptrAliasDefs: Map[String, List[Set[String
         sinkFuncs.map(sinkFunc =>
             if (McSemaUtil.isMcSemaStateType(sinkFunc.argument(0).typ)) {
                 // args are passed via state struct in McSema sub_... functions
-                (LLVMFunction(sinkFunc), new IFDSFact(NativeArrayElement(
-                    sinkFunc.argument(0),
-                    McSemaUtil.getFirstArgRegIndices(sinkFunc.module.targetTriple)
-                )))
-            } else (LLVMFunction(sinkFunc), new IFDSFact(NativeVariable(sinkFunc.argument(0)))))
+                (LLVMFunction(sinkFunc), new IFDSFact(NativeTaintNullFact))
+            } else (LLVMFunction(sinkFunc), new IFDSFact(NativeTaintNullFact)))
     }
 
     /**
@@ -58,14 +55,24 @@ class SimpleNativeBackwardTaintProblem(ptrAliasDefs: Map[String, List[Set[String
         else None
     }
 
+    /**
+     * Add taint fact for sink function's first argument on exit, as it might get overridden when added at entry.
+     */
     override def createFlowFactAtExit(callee: NativeFunction, in: NativeTaintFact,
-                                      unbCallChain: Seq[Callable]): Option[NativeTaintFact] = None
+                                      unbCallChain: Seq[Callable]): Option[NativeTaintFact] = callee match {
+        case LLVMFunction(function) if function.name == "sink" =>
+            Some(NativeVariable(function.argument(0)))
+        case LLVMFunction(function) if McSemaUtil.matchesMcSemaFunctionName(function.name, "sink") &&
+            McSemaUtil.isMcSemaStateType(function.argument(0).typ) =>
+            Some(NativeArrayElement(function.argument(0), McSemaUtil.getFirstArgRegIndices(function.module.targetTriple)))
+        case _ => None
+    }
 }
 
 class SimpleNativeBackwardTaintAnalysis(project: SomeProject)
     extends NativeIFDSAnalysis(project, new SimpleNativeBackwardTaintProblem(Map(), project), NativeTaint)
 
-class SimpleNativeMcSemaBackwardTaintAnalysis(project: SomeProject)
+class SimpleNativeMcSemaX8664BackwardTaintAnalysis(project: SomeProject)
     extends NativeIFDSAnalysis(project, new SimpleNativeBackwardTaintProblem(Map(
         "sub_1ff012d0_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1zero_1to_1sink" ->
             List(Set("%RAX_ptr", "%EAX_ptr")),
@@ -75,14 +82,32 @@ class SimpleNativeMcSemaBackwardTaintAnalysis(project: SomeProject)
             List(Set("%33", "%42", "%75")),
     ), project), NativeTaint)
 
+class SimpleNativeMcSemaAarch64BackwardTaintAnalysis(project: SomeProject)
+    extends NativeIFDSAnalysis(project, new SimpleNativeBackwardTaintProblem(Map(
+        "sub_1ff00e3c_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1identity_1to_1sink" ->
+            List(Set("%X0_ptr", "%W0_ptr")),
+        "sub_1ff00bb0__identity" ->
+            List(Set("%X0_ptr", "%W0_ptr")),
+        "sub_1ff00df4_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_sanitize_1only_1a_1into_1sink" ->
+            List(Set("%10", "%16", "%25")),
+    ), project), NativeTaint)
+
 object NativeBackwardTaintAnalysisScheduler extends NativeIFDSAnalysisScheduler[NativeTaintFact] {
     override def init(p: SomeProject, ps: PropertyStore) = new SimpleNativeBackwardTaintAnalysis(p)
     override def property: IFDSPropertyMetaInformation[LLVMStatement, NativeTaintFact] = NativeTaint
     override val uses: Set[PropertyBounds] = Set()
     override def requiredProjectInformation: ProjectInformationKeys = SimpleNativeCallGraphKey +: super.requiredProjectInformation
 }
-object NativeMcSemaBackwardTaintAnalysisScheduler extends NativeIFDSAnalysisScheduler[NativeTaintFact] {
-    override def init(p: SomeProject, ps: PropertyStore) = new SimpleNativeMcSemaBackwardTaintAnalysis(p)
+
+object NativeMcSemaX8664BackwardTaintAnalysisScheduler extends NativeIFDSAnalysisScheduler[NativeTaintFact] {
+    override def init(p: SomeProject, ps: PropertyStore) = new SimpleNativeMcSemaX8664BackwardTaintAnalysis(p)
+    override def property: IFDSPropertyMetaInformation[LLVMStatement, NativeTaintFact] = NativeTaint
+    override val uses: Set[PropertyBounds] = Set()
+    override def requiredProjectInformation: ProjectInformationKeys = SimpleNativeCallGraphKey +: super.requiredProjectInformation
+}
+
+object NativeMcSemaAarch64BackwardTaintAnalysisScheduler extends NativeIFDSAnalysisScheduler[NativeTaintFact] {
+    override def init(p: SomeProject, ps: PropertyStore) = new SimpleNativeMcSemaAarch64BackwardTaintAnalysis(p)
     override def property: IFDSPropertyMetaInformation[LLVMStatement, NativeTaintFact] = NativeTaint
     override val uses: Set[PropertyBounds] = Set()
     override def requiredProjectInformation: ProjectInformationKeys = SimpleNativeCallGraphKey +: super.requiredProjectInformation

@@ -60,3 +60,5 @@ scalac.options.local
 # settings from the build file
 local.sbt
 .sbtopts
+
+*.swp

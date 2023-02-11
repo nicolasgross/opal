@@ -1,2 +1,0 @@
-clang -shared -fpic -I/usr/lib/jvm/java/include/ -I/usr/lib/jvm/java/include/linux/ -o libtainttest.so TaintTest.c
-clang -S -I/usr/lib/jvm/java/include/ -I/usr/lib/jvm/java/include/linux/ TaintTest.c -emit-llvm
