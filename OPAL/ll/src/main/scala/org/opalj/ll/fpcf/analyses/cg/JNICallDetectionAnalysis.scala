@@ -19,8 +19,6 @@ object JNICallDetectionAnalysis {
     private val LogCategory = "JNI Call Detection"
 
     def analyze(call: Call, project: SomeProject): Option[Set[Method]] = {
-        val func = call.function
-        print(func)
         implicit val declaredMethods: DeclaredMethods = project.get(DeclaredMethodsKey)
 
         resolveJNIFunction(call, project) match {
@@ -76,12 +74,15 @@ object JNICallDetectionAnalysis {
     }
 
     private def closestStoreToLoad(load: Load): Option[Store] = {
-        val stores = load.src.users.filter(_.isInstanceOf[Store]).map(_.asInstanceOf[Store]).filter(_.address < load.address)
-        if (stores.nonEmpty) Some(stores.reduce((s1, s2) => {
-            if ((load.address - s1.address) < (load.address - s2.address)) s1
-            else s2
-        }))
-        else None
+        val stores = load.src.users.filter(_.isInstanceOf[Store])
+            .map(_.asInstanceOf[Store])
+            .filter(load.allPrevious.contains(_))
+        if (stores.nonEmpty) {
+            Some(stores.reduce((s1, s2) => {
+                if ((load.address - s1.address) < (load.address - s2.address)) s1
+                else s2
+            }))
+        } else None
     }
 
     private def getOriginCall(value: Value): Option[Call] = value match {
