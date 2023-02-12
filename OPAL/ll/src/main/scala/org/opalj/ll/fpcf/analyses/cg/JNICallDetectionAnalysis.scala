@@ -44,6 +44,7 @@ object JNICallDetectionAnalysis {
 
         def matchJNIEnvIndex(index: Long): Option[Symbol] = index match {
             // https://docs.oracle.com/en/java/javase/13/docs/specs/jni/functions.html has the indices
+            case 6                                   => Some(Symbol("FindClass"))
             case 31                                  => Some(Symbol("GetObjectClass"))
             case 33                                  => Some(Symbol("GetMethodId"))
             case index if index >= 34 && index <= 63 => Some(Symbol("CallTypeMethod")) // CallObjectMethod to CallVoidMethodA
@@ -156,7 +157,7 @@ object JNICallDetectionAnalysis {
                     // caller is no JNI function or class cannot be resolved to callers second arg:
                     case _ => Some("")
                 }
-            //case Some(jniFunc) if jniFunc == Symbol("FindClass") => TODO resolve
+            case Some(jniFunc) if jniFunc == Symbol("FindClass") => resolveString(call.operand(1))
             case _ => None // seems to be no JNI call
         }
         case None => Some("") // could still be a JNI call, class object might have other origin, e.g. function parameter
