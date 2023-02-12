@@ -64,10 +64,8 @@ class SimpleNativeForwardTaintProblem(ptrAliasDefs: Map[String, List[Set[String]
 class SimpleNativeForwardTaintAnalysis(project: SomeProject)
     extends NativeIFDSAnalysis(project, new SimpleNativeForwardTaintProblem(Map(), project), NativeTaint)
 
-class SimpleNativeMcSemaForwardTaintAnalysis(project: SomeProject)
+class SimpleNativeMcSemaX8664ForwardTaintAnalysis(project: SomeProject)
     extends NativeIFDSAnalysis(project, new SimpleNativeForwardTaintProblem(Map(
-        "sub_1ff012d0_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1zero_1to_1sink" ->
-            List(Set("%RAX_ptr", "%EAX_ptr")),
         "sub_1ff01290_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1identity_1to_1sink" ->
             List(Set("%RAX_ptr", "%EAX_ptr")),
         "sub_1ff01250_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_sanitize_1only_1a_1into_1sink" ->
@@ -78,14 +76,32 @@ class SimpleNativeMcSemaForwardTaintAnalysis(project: SomeProject)
             List(Set("%RAX_ptr", "%EAX_ptr"))
     ), project), NativeTaint)
 
+class SimpleNativeMcSemaAarch64ForwardTaintAnalysis(project: SomeProject)
+    extends NativeIFDSAnalysis(project, new SimpleNativeForwardTaintProblem(Map(
+        "sub_1ff00e3c_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1identity_1to_1sink" ->
+            List(Set("%X0_ptr", "%W0_ptr")),
+        "sub_1ff00df4_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_sanitize_1only_1a_1into_1sink" ->
+            List(Set("%10", "%16", "%25")),
+        "sub_1ff00ed4_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_native_1array_1tainted" ->
+            List(Set("%X0_ptr", "%W0_ptr")),
+        "sub_1ff00d2c_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1source" ->
+            List(Set("%X0_ptr", "%W0_ptr")),
+    ), project), NativeTaint)
+
 object NativeForwardTaintAnalysisScheduler extends NativeIFDSAnalysisScheduler[NativeTaintFact] {
     override def init(p: SomeProject, ps: PropertyStore) = new SimpleNativeForwardTaintAnalysis(p)
     override def property: IFDSPropertyMetaInformation[LLVMStatement, NativeTaintFact] = NativeTaint
     override val uses: Set[PropertyBounds] = Set() // ++ PropertyBounds.ub(Taint) TODO: we do not use the native taint yet
 }
 
-object NativeMcSemaForwardTaintAnalysisScheduler extends NativeIFDSAnalysisScheduler[NativeTaintFact] {
-    override def init(p: SomeProject, ps: PropertyStore) = new SimpleNativeMcSemaForwardTaintAnalysis(p)
+object NativeMcSemaX8664ForwardTaintAnalysisScheduler extends NativeIFDSAnalysisScheduler[NativeTaintFact] {
+    override def init(p: SomeProject, ps: PropertyStore) = new SimpleNativeMcSemaX8664ForwardTaintAnalysis(p)
+    override def property: IFDSPropertyMetaInformation[LLVMStatement, NativeTaintFact] = NativeTaint
+    override val uses: Set[PropertyBounds] = Set() // ++ PropertyBounds.ub(Taint) TODO: we do not use the native taint yet
+}
+
+object NativeMcSemaAarch64ForwardTaintAnalysisScheduler extends NativeIFDSAnalysisScheduler[NativeTaintFact] {
+    override def init(p: SomeProject, ps: PropertyStore) = new SimpleNativeMcSemaAarch64ForwardTaintAnalysis(p)
     override def property: IFDSPropertyMetaInformation[LLVMStatement, NativeTaintFact] = NativeTaint
     override val uses: Set[PropertyBounds] = Set() // ++ PropertyBounds.ub(Taint) TODO: we do not use the native taint yet
 }

@@ -3,10 +3,10 @@ package org.opalj.ll
 
 import org.opalj.br.analyses.Project
 import org.opalj.fpcf.PropertiesTest
-import org.opalj.fpcf.properties.taint_xlang.{XlangForwardFlowPath, XlangMcSemaX8664ForwardFlowPath}
+import org.opalj.fpcf.properties.taint_xlang.{XlangForwardFlowPath, XlangMcSemaAarch64ForwardFlowPath, XlangMcSemaX8664ForwardFlowPath}
 import org.opalj.ifds.IFDSFact
 import org.opalj.ll.fpcf.analyses.ifds.NativeIFDSAnalysisScheduler
-import org.opalj.ll.fpcf.analyses.ifds.taint.{JavaForwardTaintAnalysisScheduler, NativeForwardTaintAnalysisScheduler, NativeMcSemaForwardTaintAnalysisScheduler, NativeTaintFact}
+import org.opalj.ll.fpcf.analyses.ifds.taint.{JavaForwardTaintAnalysisScheduler, NativeForwardTaintAnalysisScheduler, NativeMcSemaAarch64ForwardTaintAnalysisScheduler, NativeMcSemaX8664ForwardTaintAnalysisScheduler, NativeTaintFact}
 import org.opalj.tac.cg.RTACallGraphKey
 import org.opalj.tac.fpcf.analyses.ifds.taint.TaintNullFact
 
@@ -41,10 +41,16 @@ class CrossLanguageForwardTaintAnalysisTest extends AbstractCrossLanguageForward
     NativeForwardTaintAnalysisScheduler
 )
 
-class CrossLanguageMcSemaForwardTaintAnalysisTest extends AbstractCrossLanguageForwardTaintAnalysisTest(
+class CrossLanguageMcSemaX8664ForwardTaintAnalysisTest extends AbstractCrossLanguageForwardTaintAnalysisTest(
     "./DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/x86_64/lifted_mcsema.ll",
     XlangMcSemaX8664ForwardFlowPath.PROPERTY_VALIDATOR_KEY,
-    NativeMcSemaForwardTaintAnalysisScheduler
+    NativeMcSemaX8664ForwardTaintAnalysisScheduler
+)
+
+class CrossLanguageMcSemaAarch64ForwardTaintAnalysisTest extends AbstractCrossLanguageForwardTaintAnalysisTest(
+    "./DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/aarch64/lifted_mcsema.ll",
+    XlangMcSemaAarch64ForwardFlowPath.PROPERTY_VALIDATOR_KEY,
+    NativeMcSemaAarch64ForwardTaintAnalysisScheduler
 )
 
 class CrossLanguageRetdecForwardTaintAnalysisTest extends AbstractCrossLanguageForwardTaintAnalysisTest(
