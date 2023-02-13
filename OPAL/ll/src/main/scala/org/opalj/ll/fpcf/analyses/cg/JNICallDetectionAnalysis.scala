@@ -9,7 +9,7 @@ import org.opalj.ll.llvm.value.{Argument, BinaryOperation, Call, GetElementPtr, 
 import org.opalj.log.{GlobalLogContext, LogContext, OPALLogger}
 
 /**
- * TODO
+ * Analysis that detects JNI calls and resolves the Java callee.
  *
  * @author Marc Clement
  * @author Nicolas Gross
@@ -18,16 +18,33 @@ object JNICallDetectionAnalysis {
     private implicit val LogContext: LogContext = GlobalLogContext
     private val LogCategory = "JNI Call Detection"
 
+    /**
+     * Detects whether a call is a JNI call. If yes, the analysis tries to resolve the Java callee.
+     *
+     * @param call the call that should be analyzed.
+     * @param project the corresponding project.
+     * @return None if no JNI call could be resolved. Otherwise, a set of all possible Java callees is returned.
+     *         If only the method could be resolved but not the class, the set might contain more than one callee if
+     *         method name and signature are not unique.
+     */
     def analyze(call: Call, project: SomeProject): Option[Set[Method]] = {
         implicit val declaredMethods: DeclaredMethods = project.get(DeclaredMethodsKey)
 
         resolveJNIFunction(call, project) match {
-            case Some(Symbol("CallTypeMethod")) => resolveMethodId(call.operand(2), project) match { // methodID is the third parameter
-                case None =>
-                    OPALLogger.warn(LogCategory, s"called method in JNI call could not be resolved: $call in ${call.function}")
-                    None
-                case methods => methods
-            }
+            case Some(Symbol("CallTypeMethod")) =>
+                resolveMethodId(call.operand(2), false, project) match { // methodID is the third parameter
+                    case None =>
+                        OPALLogger.warn(LogCategory, s"called method in JNI call could not be resolved: $call in ${call.function}")
+                        None
+                    case methods => methods
+                }
+            case Some(Symbol("CallStaticTypeMethod")) =>
+                resolveMethodId(call.operand(2), true, project) match { // methodID is the third parameter
+                    case None =>
+                        OPALLogger.warn(LogCategory, s"called method in JNI call could not be resolved: $call in ${call.function}")
+                        None
+                    case methods => methods
+                }
             case _ => None
         }
     }
@@ -44,11 +61,13 @@ object JNICallDetectionAnalysis {
 
         def matchJNIEnvIndex(index: Long): Option[Symbol] = index match {
             // https://docs.oracle.com/en/java/javase/13/docs/specs/jni/functions.html has the indices
-            case 6                                   => Some(Symbol("FindClass"))
-            case 31                                  => Some(Symbol("GetObjectClass"))
-            case 33                                  => Some(Symbol("GetMethodId"))
-            case index if index >= 34 && index <= 63 => Some(Symbol("CallTypeMethod")) // CallObjectMethod to CallVoidMethodA
-            case _                                   => None // unknown JNI function index or simply no JNI call
+            case 6                                     => Some(Symbol("FindClass"))
+            case 31                                    => Some(Symbol("GetObjectClass"))
+            case 33                                    => Some(Symbol("GetMethodId"))
+            case index if index >= 34 && index <= 63   => Some(Symbol("CallTypeMethod")) // CallObjectMethod to CallVoidMethodA
+            case 113                                   => Some(Symbol("GetStaticMethodId"))
+            case index if index >= 114 && index <= 143 => Some(Symbol("CallStaticTypeMethod")) // CallStaticObjectMethod to CallStaticVoidMethodA
+            case _                                     => None // unknown JNI function index or simply no JNI call
         }
 
         def matchBinOpOperand(operand: Value): Option[Symbol] = {
@@ -98,14 +117,14 @@ object JNICallDetectionAnalysis {
         case _ => None
     }
 
-    private def resolveMethodId(methodId: Value, project: SomeProject)(implicit declaredMethods: DeclaredMethods): Option[Set[Method]] = {
+    private def resolveMethodId(methodId: Value, isStatic: Boolean, project: SomeProject)(implicit declaredMethods: DeclaredMethods): Option[Set[Method]] = {
         val getMethodIDCall = getOriginCall(methodId) match {
             case Some(call) => call
             case None       => return None
         }
         val jniFunction = resolveJNIFunction(getMethodIDCall, project)
         if (jniFunction.isEmpty || jniFunction.get != Symbol("GetMethodId")) return None
-        val clazz = resolveClass(getMethodIDCall.operand(1), project) match { // class is the second parameter
+        val clazz = resolveClass(getMethodIDCall.operand(1), LLVMFunction(getMethodIDCall.function), isStatic, project) match { // class is the second parameter
             case Some(clazz) if clazz.isEmpty => None // class name could not be recovered
             case Some(clazz)                  => Some(clazz) // class name was recovered
             case None                         => return None // seems not to be a JNI call
@@ -148,20 +167,25 @@ object JNICallDetectionAnalysis {
         case _ => None
     }
 
-    private def resolveClass(clazz: Value, project: SomeProject): Option[String] = getOriginCall(clazz) match {
+    private def resolveClass(clazz: Value, function: LLVMFunction, isStatic: Boolean, project: SomeProject): Option[String] = getOriginCall(clazz) match {
         case Some(call) => resolveJNIFunction(call, project) match {
-            case Some(jniFunc) if jniFunc == Symbol("GetObjectClass") =>
-                JNICallUtil.resolveNativeMethodName(LLVMFunction(call.function)) match {
+            case Some(Symbol("GetObjectClass")) =>
+                JNICallUtil.resolveNativeMethodName(function) match {
                     // caller is JNI function (detect by function name) and class is taken from callers second arg (this reference):
                     case Some(ident) if resolveValueIsSecondArg(call.operand(1)) => Some(ident._1)
                     // caller is no JNI function or class cannot be resolved to callers second arg:
                     case _ => Some("")
                 }
-            case Some(jniFunc) if jniFunc == Symbol("FindClass") => resolveString(call.operand(1))
+            case Some(Symbol("FindClass")) => resolveString(call.operand(1))
             case _ => None // seems to be no JNI call
         }
+        case None if isStatic => JNICallUtil.resolveNativeMethodName(function) match {
+            // caller is JNI function (detect by function name) and class is taken from callers second arg (class reference in static call):
+            case Some(ident) if resolveValueIsSecondArg(clazz) => Some(ident._1)
+            // caller is no JNI function or class cannot be resolved to callers second arg:
+            case _ => Some("")
+        }
         case None => Some("") // could still be a JNI call, class object might have other origin, e.g. function parameter
-        // TODO resolve static native calls, second arg of JNI function caller is class not this
     }
 
     private def resolveValueIsSecondArg(obj: Value): Boolean = obj match {

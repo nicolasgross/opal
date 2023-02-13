@@ -53,7 +53,7 @@ class CrossLanguageMcSemaAarch64ForwardTaintAnalysisTest extends AbstractCrossLa
     NativeMcSemaAarch64ForwardTaintAnalysisScheduler
 )
 
-class CrossLanguageRetdecForwardTaintAnalysisTest extends AbstractCrossLanguageForwardTaintAnalysisTest(
+class CrossLanguageRetdecX8664ForwardTaintAnalysisTest extends AbstractCrossLanguageForwardTaintAnalysisTest(
     "./DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/x86_64/lifted_retdec.ll",
     XlangForwardFlowPath.PROPERTY_VALIDATOR_KEY,
     NativeForwardTaintAnalysisScheduler
