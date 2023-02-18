@@ -96,6 +96,12 @@ abstract class JavaBackwardTaintProblem(project: SomeProject)
             }
         }
 
+        // propagate static field taints
+        in match {
+            case staticField: StaticField => flow += staticField
+            case _                        =>
+        }
+
         // check for tainted 'this' and pass-by-reference parameters
         val thisOffset = if (callee.isStatic) 0 else 1
         callObject.allParams.iterator.zipWithIndex
@@ -116,7 +122,6 @@ abstract class JavaBackwardTaintProblem(project: SomeProject)
                             JavaIFDSProblem.switchParamAndVariableIndex(paramIndex, callee.isStatic),
                             declaringClass, name
                         )
-                    case staticField: StaticField => flow += staticField
                     case _                        => // Nothing to do
                 }
             }
