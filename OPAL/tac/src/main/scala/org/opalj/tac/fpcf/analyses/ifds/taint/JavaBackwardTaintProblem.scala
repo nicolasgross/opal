@@ -31,7 +31,7 @@ abstract class JavaBackwardTaintProblem(project: SomeProject)
                 case ArrayElement(index, _) => index == jstmt.index
                 case _                      => false
             }) {
-                Set(in) ++ createNewTaints(jstmt.stmt.asAssignment.expr, jstmt)
+                createNewTaints(jstmt.stmt.asAssignment.expr, jstmt) + in
             } else Set(in)
             case ArrayStore.ASTID =>
                 val arrayStore = jstmt.stmt.asArrayStore
@@ -48,7 +48,7 @@ abstract class JavaBackwardTaintProblem(project: SomeProject)
                         in == ArrayElement(arrayDefinedBy.head, arrayIndex.get)) {
                         // tainted array element is overwritten -> untaint
                         createNewTaints(arrayStore.value, jstmt)
-                    } else Set(in) ++ createNewTaints(arrayStore.value, jstmt)
+                    } else createNewTaints(arrayStore.value, jstmt) + in
                 } else Set(in)
             case PutField.ASTID =>
                 val putField = jstmt.stmt.asPutField
@@ -60,13 +60,13 @@ abstract class JavaBackwardTaintProblem(project: SomeProject)
                             putField.name == fieldName
                     case _ => false
                 }) {
-                    Set(in) ++ createNewTaints(putField.value, jstmt)
+                    createNewTaints(putField.value, jstmt)
                 } else Set(in)
             case PutStatic.ASTID =>
                 val putStatic = jstmt.stmt.asPutStatic
                 in match {
                     case StaticField(classType, fieldName) if putStatic.declaringClass == classType &&
-                        putStatic.name == fieldName => Set(in) ++ createNewTaints(putStatic.value, jstmt)
+                        putStatic.name == fieldName => createNewTaints(putStatic.value, jstmt)
                     case _ => Set(in)
                 }
             case _ => Set(in)
