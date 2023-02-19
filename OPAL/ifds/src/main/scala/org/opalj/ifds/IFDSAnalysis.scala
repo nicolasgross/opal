@@ -2,7 +2,7 @@
 package org.opalj.ifds
 
 import org.opalj.br.analyses.SomeProject
-import org.opalj.br.fpcf.{FPCFAnalysis, FPCFLazyAnalysisScheduler}
+import org.opalj.br.fpcf.{DefaultFPCFAnalysis, FPCFAnalysis, FPCFLazyAnalysisScheduler}
 import org.opalj.fpcf._
 import org.opalj.ifds.Dependees.Getter
 
@@ -166,12 +166,9 @@ class Statistics {
     var callFlow = 0
     var returnFlow = 0
     var callToReturnFlow = 0
-    // TODO unbalanced return flow
     var subsumeTries = 0
     var subsumptions = 0
 }
-
-protected class ProjectFPCFAnalysis(val project: SomeProject) extends FPCFAnalysis
 
 /**
  *
@@ -184,7 +181,7 @@ class IFDSAnalysis[Fact <: AbstractIFDSFact, C <: AnyRef, S <: Statement[_ <: C,
         project:         SomeProject,
         val ifdsProblem: IFDSProblem[Fact, C, S],
         val propertyKey: IFDSPropertyMetaInformation[S, Fact]
-) extends ProjectFPCFAnalysis(project) {
+) extends DefaultFPCFAnalysis(project) {
     type Work = (Option[S], IFDSFact[Fact, S], Option[S]) // statement, fact, predecessor
     type Worklist = mutable.Queue[Work]
     type State = IFDSState[Fact, C, S, Work]
