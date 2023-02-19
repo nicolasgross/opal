@@ -21,8 +21,6 @@ class BackwardTaintAnalysisFixture(project: SomeProject)
 
 class BackwardTaintProblemFixture(p: SomeProject) extends JavaBackwardTaintProblem(p) {
 
-    override def enableUnbalancedReturns: Boolean = true
-
     override val entryPoints: Seq[(Method, IFDSFact[TaintFact, JavaStatement])] =
         p.allProjectClassFiles.filter(classFile =>
             classFile.thisType.fqn == "org/opalj/fpcf/fixtures/taint/TaintAnalysisTestClass")
