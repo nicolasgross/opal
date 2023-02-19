@@ -171,13 +171,40 @@ abstract class JavaBackwardTaintProblem(project: SomeProject)
     /**
      * Adds a FlowFact, if `createFlowFactAtCall` creates one.
      * Removes taints according to `sanitizeParamters`.
+     * Does not propagate facts of pass-by-reference params.
      */
     override def callToReturnFlow(call: JavaStatement, in: TaintFact, successor: Option[JavaStatement],
                                   unbCallChain: Seq[Callable]): Set[TaintFact] = {
-        val flowFact = createFlowFactAtCall(call, in, unbCallChain)
         val result = collection.mutable.Set.empty[TaintFact]
-        if (!sanitizesParameter(call, in)) result.add(in)
-        if (flowFact.isDefined) result.add(flowFact.get)
+
+        // do not propagate tainted pass-by-reference parameters and static fields, they are propagated via call flow and return flow
+        val callObject = JavaIFDSProblem.asCall(call.stmt)
+        val isStatic = callObject.allParams.length == callObject.params.length
+        if (!sanitizesParameter(call, in)) {
+            if (callObject.allParams.isEmpty ||
+                (isStatic && !callObject.descriptor.parameterTypes.exists(_.isReferenceType))) in match {
+                case _: StaticField =>
+                case _ => result += in
+            } else {
+                val thisOffset = if (isStatic) 0 else 1
+                callObject.allParams.iterator.zipWithIndex
+                    .filter(pair => (pair._2 == 0 && !isStatic) || // this is always pass-by-reference
+                        callObject.descriptor.parameterTypes(pair._2 - thisOffset).isReferenceType) // pass-by-reference parameters
+                    .foreach { pair =>
+                        val param = pair._1.asVar
+                        in match {
+                            case Variable(index) if param.definedBy.contains(index) =>
+                            case ArrayElement(index, taintedElement) if param.definedBy.contains(index) =>
+                            case InstanceField(index, declaringClass, name) if param.definedBy.contains(index) =>
+                            case _: StaticField =>
+                            case _ => result += in
+                        }
+                    }
+            }
+        }
+
+        val flowFact = createFlowFactAtCall(call, in, unbCallChain)
+        if (flowFact.isDefined) result += flowFact.get
         result.toSet
     }
 
