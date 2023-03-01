@@ -36,9 +36,11 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
                     Set(NativeArrayElement(store.src, indices))
                 // value is stored into tainted array element
                 case gep: GetElementPtr if gep.base == base || getPtrAliases(base, statement.function).contains(gep.base) =>
-                    // if indices are not constant, assume the tainted element is written
-                    if ((gep.isConstant && gep.constants == indices) || !gep.isConstant)
+                    if ((gep.isConstant && gep.constants == indices))
                         Set(NativeVariable(store.src))
+                    else if (!gep.isConstant)
+                        // if indices are not constant, use over-approximation and taint both
+                        Set(in, NativeVariable(store.src))
                     else Set(in)
                 case _ => Set(in)
             }

@@ -131,7 +131,6 @@ class SimpleJavaBackwardTaintProblem(p: SomeProject) extends JavaBackwardTaintPr
         // JNI call args if non-static: JNIEnv, this, method, arg 0, arg 1, ...
         def taintActualIfFormal(index: Int): Set[NativeTaintFact] = {
             if (index > -1) Set.empty // tac parameter indices are < 0, index is no argument
-
             val javaParamIndex = JavaIFDSProblem.switchParamAndVariableIndex(index, callee.isStatic)
             val nativeParamIndex = JNICallUtil.javaParamIndexToNative(javaParamIndex, callee.isStatic)
             Set(NativeVariable(callInstr.argument(nativeParamIndex).get))
