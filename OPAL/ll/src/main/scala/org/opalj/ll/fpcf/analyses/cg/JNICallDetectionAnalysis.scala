@@ -60,7 +60,7 @@ object JNICallDetectionAnalysis {
         }
 
         def matchJNIEnvIndex(index: Long): Option[Symbol] = index match {
-            // https://docs.oracle.com/en/java/javase/13/docs/specs/jni/functions.html has the indices
+            // https://docs.oracle.com/en/java/javase/19/docs/specs/jni/functions.html has the indices
             case 6                                     => Some(Symbol("FindClass"))
             case 31                                    => Some(Symbol("GetObjectClass"))
             case 33                                    => Some(Symbol("GetMethodId"))
