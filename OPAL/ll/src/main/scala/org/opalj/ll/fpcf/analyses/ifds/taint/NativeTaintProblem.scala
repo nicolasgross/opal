@@ -2,8 +2,8 @@
 package org.opalj.ll.fpcf.analyses.ifds.taint
 
 import org.opalj.br.ObjectType
-import org.opalj.ifds.{AbstractIFDSNullFact, Callable, AbstractIFDSFact}
-import org.opalj.ll.llvm.value.Value
+import org.opalj.ifds.{AbstractIFDSFact, AbstractIFDSNullFact, Callable}
+import org.opalj.ll.llvm.value.{GlobalVariable, Value}
 
 trait NativeTaintFact extends AbstractIFDSFact
 
@@ -16,6 +16,7 @@ object NativeTaintNullFact extends NativeTaintFact with AbstractIFDSNullFact
  */
 case class JavaVariable(index: Int) extends NativeTaintFact
 case class NativeVariable(value: Value) extends NativeTaintFact
+case class NativeGlobalVariable(value: GlobalVariable) extends NativeTaintFact
 
 /**
  * A tainted array element.
@@ -25,6 +26,7 @@ case class NativeVariable(value: Value) extends NativeTaintFact
  */
 case class JavaArrayElement(index: Int, element: Int) extends NativeTaintFact
 case class NativeArrayElement(base: Value, indices: Iterable[Long]) extends NativeTaintFact
+case class NativeGlobalArrayElement(base: GlobalVariable, indices: Iterable[Long]) extends NativeTaintFact
 
 /**
  * A tainted static field.

@@ -26,17 +26,11 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
 
     override def normalFlow(statement: LLVMStatement, in: NativeTaintFact,
                             predecessor: Option[LLVMStatement]): Set[NativeTaintFact] = statement.instruction match {
-        case store: Store => in match {
-            // do not propagate in if in == store.dst, tainted value is overwritten
-            case NativeVariable(value) if value == store.dst || getPtrAliases(value, statement.function).contains(store.dst) =>
-                Set(NativeVariable(store.src))
-            case NativeArrayElement(base, indices) => store.dst match { // dst is pointer type
-                // value is array and is stored to tainted alloca
-                case dst: Alloca if dst == base || getPtrAliases(base, statement.function).contains(dst) =>
-                    Set(NativeArrayElement(store.src, indices))
+        case store: Store =>
+            def handleArrayElem(base: Value, indices: Iterable[Long]): Set[NativeTaintFact] = store.dst match {
                 // value is stored into tainted array element
                 case gep: GetElementPtr if gep.base == base || getPtrAliases(base, statement.function).contains(gep.base) =>
-                    if ((gep.isConstant && gep.constants == indices))
+                    if (gep.isConstant && gep.constants == indices)
                         Set(NativeVariable(store.src))
                     else if (!gep.isConstant)
                         // if indices are not constant, use over-approximation and taint both
@@ -44,25 +38,57 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
                     else Set(in)
                 case _ => Set(in)
             }
-            case _ => Set(in)
+            in match {
+                // do not propagate in if in == store.dst, tainted value is overwritten
+                case NativeVariable(value) if value == store.dst || getPtrAliases(value, statement.function).contains(store.dst) =>
+                    Set(NativeVariable(store.src))
+                case NativeGlobalVariable(value) if value == store.dst || getPtrAliases(value, statement.function).contains(store.dst) =>
+                    Set(NativeVariable(store.src))
+                case NativeArrayElement(base, indices) => handleArrayElem(base, indices)
+                case NativeGlobalArrayElement(base, indices) => handleArrayElem(base, indices)
+                case _ => Set(in)
         }
-        case load: Load => in match {
-            case NativeVariable(value) if value == load => Set(in, NativeVariable(load.src)) ++
-                getPtrAliases(load.src, statement.function).map(NativeVariable)
-            case NativeArrayElement(base, _) if base == load => Set(in, NativeVariable(load.src)) ++
-                getPtrAliases(load.src, statement.function).map(NativeVariable)
-            case _ => Set(in)
-        }
+        case load: Load =>
+            def handleLoad: Set[NativeTaintFact] = {
+                val srcTaint = load.src match {
+                    case variable: GlobalVariable => Set(in, NativeGlobalVariable(variable))
+                    case _ => Set(in, NativeVariable(load.src))
+                }
+                srcTaint ++ getPtrAliases(load.src, statement.function).map {
+                    case in: GlobalVariable => NativeGlobalVariable(in)
+                    case in => NativeVariable(in)
+                }
+            }
+            in match {
+                case NativeVariable(value) if value == load => handleLoad
+                case NativeArrayElement(base, _) if base == load => handleLoad
+                case _ => Set(in)
+            }
         case gep: GetElementPtr =>
             def matchValueForGep(gep: GetElementPtr): Set[NativeTaintFact] = {
-                if (gep.isConstant) Set(in, NativeArrayElement(gep.base, gep.constants)) ++
-                    getPtrAliases(gep.base, statement.function).map(NativeArrayElement(_, gep.constants))
-                else Set(in, NativeVariable(gep.base)) ++
-                    getPtrAliases(gep.base, statement.function).map(NativeVariable)
+                if (gep.isConstant) {
+                    val baseTaint = gep.base match {
+                        case base: GlobalVariable => Set(in, NativeGlobalArrayElement(base, gep.constants))
+                        case _ => Set(in, NativeArrayElement(gep.base, gep.constants))
+                    }
+                    baseTaint ++ getPtrAliases(gep.base, statement.function).map {
+                        case in: GlobalVariable => NativeGlobalArrayElement(in, gep.constants)
+                        case in => NativeArrayElement(in, gep.constants)
+                    }
+                } else {
+                    val baseTaint = gep.base match {
+                        case value: GlobalVariable => Set(in, NativeGlobalVariable(value))
+                        case _ => Set(in, NativeVariable(gep.base))
+                    }
+                    baseTaint ++ getPtrAliases(gep.base, statement.function).map {
+                        case in: GlobalVariable => NativeGlobalVariable(in)
+                        case in => NativeVariable(in)
+                    }
+                }
             }
             in match {
                 case NativeVariable(value) if value == gep      => matchValueForGep(gep)
-                case NativeArrayElement(base, _) if base == gep => matchValueForGep(gep)
+                case NativeArrayElement(base, _) if base == gep => matchValueForGep(gep) // nested arrays
                 case _                                          => Set(in)
             }
         case fneg: FNeg => in match {
@@ -131,18 +157,22 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
                 // taint return value in callee, if tainted in caller
                 start.instruction match {
                     case ret: Ret if ret.value.isDefined => in match {
-                        case NativeVariable(value) if value == call.instruction =>
-                            flows += NativeVariable(ret.value.get)
-                        case NativeArrayElement(base, indices) if base == call.instruction =>
-                            flows += NativeArrayElement(ret.value.get, indices)
+                        case NativeVariable(value) if value == call.instruction => ret.value.get match {
+                            case variable: GlobalVariable => flows += NativeGlobalVariable(variable)
+                            case _ => flows += NativeVariable(ret.value.get)
+                        }
+                        case NativeArrayElement(base, indices) if base == call.instruction => ret.value.get match {
+                            case variable: GlobalVariable => flows += NativeGlobalArrayElement(variable, indices)
+                            case _ => flows += NativeArrayElement(ret.value.get, indices)
+                        }
                         case _ =>
                     }
                     case _ =>
                 }
 
-                // check for tainted pass-by-reference parameters (pointer)
                 // TODO handle `byval` attribute or not? nested objects?
                 in match {
+                    // check for tainted pass-by-reference parameters (pointer)
                     case NativeVariable(value) => value match {
                         case gep: GetElementPtr if gep.isConstant => indexOfAliasedArg(gep.base, callInstr, call.function) match {
                             case Some(index) => flows += NativeArrayElement(callee.argument(index), gep.constants)
@@ -156,6 +186,7 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
                             case None =>
                         }
                     }
+                    // check for tainted pass-by-reference parameters (pointer)
                     case NativeArrayElement(base, indices) => indexOfAliasedArg(base, callInstr, call.function) match {
                         case Some(index) => callInstr.argument(index).get.typ match {
                             case PointerType(_) => flows += NativeArrayElement(callee.argument(index), indices)
@@ -163,6 +194,9 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
                         }
                         case None =>
                     }
+                    // keep global variable taint facts
+                    case _: NativeGlobalVariable => flows += in
+                    case _: NativeGlobalArrayElement => flows += in
                     case NativeTaintNullFact => flows += in
                     case _                   =>
                 }
@@ -196,6 +230,9 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
                         getPtrAliases(argInCall, call.function).map(NativeArrayElement(_, indices)).map(_.asInstanceOf[NativeTaintFact])
                 case None => Set.empty
             }
+            // keep global variable taint facts
+            case _: NativeGlobalVariable => Set(in)
+            case _: NativeGlobalArrayElement => Set(in)
             case NativeTaintNullFact => Set(in)
             case NativeFlowFact(flow) if !flow.contains(call.function) => Set(NativeFlowFact(call.function +: flow))
             case _ => Set.empty
@@ -219,9 +256,11 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
     override def callToReturnFlow(call: LLVMStatement, in: NativeTaintFact, successor: Option[LLVMStatement],
                                   unbCallChain: Seq[Callable]): Set[NativeTaintFact] = {
         val callInstr = call.instruction.asInstanceOf[Call]
+        val isXlangCall = icfg.getCalleesIfCallStatement(call).get.exists(_.isInstanceOf[JNIMethod])
 
         // tainted pointer values passed to callee are not propagated via callToReturn flow
         // instead, they are propagated via call flow and return flow because they might not be valid anymore after the call
+        // global variables are only propagated on xlang calls
         val propagatedIn: Set[NativeTaintFact] = in match {
             case NativeVariable(value) => indexOfAliasedArg(value, callInstr, call.function) match {
                 case Some(index) => callInstr.argument(index).get.typ match {
@@ -234,6 +273,13 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
                 case Some(_) => Set.empty // array elem base is always a pointer
                 case None    => Set(in)
             }
+            // do not propagate global variables except if it is a xlang call
+            case _: NativeGlobalVariable =>
+                if (isXlangCall) Set(in)
+                else Set.empty
+            case _: NativeGlobalArrayElement =>
+                if (isXlangCall) Set(in)
+                else Set.empty
             case _ => Set(in)
         }
 
