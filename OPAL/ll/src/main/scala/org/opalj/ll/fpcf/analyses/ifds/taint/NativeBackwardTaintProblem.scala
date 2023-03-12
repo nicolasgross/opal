@@ -44,51 +44,51 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
                     Set(NativeVariable(store.src))
                 case NativeGlobalVariable(value) if value == store.dst || getPtrAliases(value, statement.function).contains(store.dst) =>
                     Set(NativeVariable(store.src))
-                case NativeArrayElement(base, indices) => handleArrayElem(base, indices)
+                case NativeArrayElement(base, indices)       => handleArrayElem(base, indices)
                 case NativeGlobalArrayElement(base, indices) => handleArrayElem(base, indices)
-                case _ => Set(in)
-        }
+                case _                                       => Set(in)
+            }
         case load: Load =>
             def handleLoad: Set[NativeTaintFact] = {
                 val srcTaint = load.src match {
                     case variable: GlobalVariable => Set(in, NativeGlobalVariable(variable))
-                    case _ => Set(in, NativeVariable(load.src))
+                    case _                        => Set(in, NativeVariable(load.src))
                 }
                 srcTaint ++ getPtrAliases(load.src, statement.function).map {
                     case in: GlobalVariable => NativeGlobalVariable(in)
-                    case in => NativeVariable(in)
+                    case in                 => NativeVariable(in)
                 }
             }
             in match {
-                case NativeVariable(value) if value == load => handleLoad
+                case NativeVariable(value) if value == load      => handleLoad
                 case NativeArrayElement(base, _) if base == load => handleLoad
-                case _ => Set(in)
+                case _                                           => Set(in)
             }
         case gep: GetElementPtr =>
-            def matchValueForGep(gep: GetElementPtr): Set[NativeTaintFact] = {
+            def handleGep(gep: GetElementPtr): Set[NativeTaintFact] = {
                 if (gep.isConstant) {
                     val baseTaint = gep.base match {
                         case base: GlobalVariable => Set(in, NativeGlobalArrayElement(base, gep.constants))
-                        case _ => Set(in, NativeArrayElement(gep.base, gep.constants))
+                        case _                    => Set(in, NativeArrayElement(gep.base, gep.constants))
                     }
                     baseTaint ++ getPtrAliases(gep.base, statement.function).map {
                         case in: GlobalVariable => NativeGlobalArrayElement(in, gep.constants)
-                        case in => NativeArrayElement(in, gep.constants)
+                        case in                 => NativeArrayElement(in, gep.constants)
                     }
                 } else {
                     val baseTaint = gep.base match {
                         case value: GlobalVariable => Set(in, NativeGlobalVariable(value))
-                        case _ => Set(in, NativeVariable(gep.base))
+                        case _                     => Set(in, NativeVariable(gep.base))
                     }
                     baseTaint ++ getPtrAliases(gep.base, statement.function).map {
                         case in: GlobalVariable => NativeGlobalVariable(in)
-                        case in => NativeVariable(in)
+                        case in                 => NativeVariable(in)
                     }
                 }
             }
             in match {
-                case NativeVariable(value) if value == gep      => matchValueForGep(gep)
-                case NativeArrayElement(base, _) if base == gep => matchValueForGep(gep) // nested arrays
+                case NativeVariable(value) if value == gep      => handleGep(gep)
+                case NativeArrayElement(base, _) if base == gep => handleGep(gep) // nested arrays
                 case _                                          => Set(in)
             }
         case fneg: FNeg => in match {
@@ -159,11 +159,11 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
                     case ret: Ret if ret.value.isDefined => in match {
                         case NativeVariable(value) if value == call.instruction => ret.value.get match {
                             case variable: GlobalVariable => flows += NativeGlobalVariable(variable)
-                            case _ => flows += NativeVariable(ret.value.get)
+                            case _                        => flows += NativeVariable(ret.value.get)
                         }
                         case NativeArrayElement(base, indices) if base == call.instruction => ret.value.get match {
                             case variable: GlobalVariable => flows += NativeGlobalArrayElement(variable, indices)
-                            case _ => flows += NativeArrayElement(ret.value.get, indices)
+                            case _                        => flows += NativeArrayElement(ret.value.get, indices)
                         }
                         case _ =>
                     }
@@ -195,10 +195,10 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
                         case None =>
                     }
                     // keep global variable taint facts
-                    case _: NativeGlobalVariable => flows += in
+                    case _: NativeGlobalVariable     => flows += in
                     case _: NativeGlobalArrayElement => flows += in
-                    case NativeTaintNullFact => flows += in
-                    case _                   =>
+                    case NativeTaintNullFact         => flows += in
+                    case _                           =>
                 }
 
                 flows.toSet ++ flows.filter(_.isInstanceOf[NativeArrayElement])

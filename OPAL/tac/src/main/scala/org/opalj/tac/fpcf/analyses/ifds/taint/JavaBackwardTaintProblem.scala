@@ -122,7 +122,7 @@ abstract class JavaBackwardTaintProblem(project: SomeProject)
                             JavaIFDSProblem.switchParamAndVariableIndex(paramIndex, callee.isStatic),
                             declaringClass, name
                         )
-                    case _                        => // Nothing to do
+                    case _ => // Nothing to do
                 }
             }
         flow.toSet
@@ -184,8 +184,9 @@ abstract class JavaBackwardTaintProblem(project: SomeProject)
             if (callObject.allParams.isEmpty ||
                 (isStatic && !callObject.descriptor.parameterTypes.exists(_.isReferenceType))) in match {
                 case _: StaticField =>
-                case _ => result += in
-            } else {
+                case _              => result += in
+            }
+            else {
                 val thisOffset = if (isStatic) 0 else 1
                 callObject.allParams.iterator.zipWithIndex
                     .filter(pair => (pair._2 == 0 && !isStatic) || // this is always pass-by-reference

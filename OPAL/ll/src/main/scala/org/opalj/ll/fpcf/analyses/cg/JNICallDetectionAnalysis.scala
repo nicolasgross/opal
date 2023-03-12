@@ -177,13 +177,13 @@ object JNICallDetectionAnalysis {
                     case _ => Some("")
                 }
             case Some(Symbol("FindClass")) => resolveString(call.operand(1))
-            case _ => None // seems to be no JNI call
+            case _                         => None // seems to be no JNI call
         }
         case None if isStatic => JNICallUtil.resolveNativeMethodName(function) match {
             // caller is JNI function (detect by function name) and class is taken from callers second arg (class reference in static call):
             case Some(ident) if resolveValueIsSecondArg(clazz) => Some(ident._1)
             // caller is no JNI function or class cannot be resolved to callers second arg:
-            case _ => Some("")
+            case _                                             => Some("")
         }
         case None => Some("") // could still be a JNI call, class object might have other origin, e.g. function parameter
     }
