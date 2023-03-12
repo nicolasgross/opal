@@ -35,9 +35,18 @@ define dso_local i32 @Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propag
   %4 = alloca ptr, align 8
   store ptr %0, ptr %3, align 8
   store ptr %1, ptr %4, align 8
-  %5 = call i32 @source()
+  %5 = call i32 @source(i32 noundef 42)
   %6 = add nsw i32 %5, 23
   ret i32 %6
+}
+
+; Function Attrs: noinline nounwind optnone uwtable
+define dso_local i32 @source(i32 noundef %0) #0 {
+  %2 = alloca i32, align 4
+  store i32 %0, ptr %2, align 4
+  %3 = load i32, ptr %2, align 4
+  %4 = mul nsw i32 %3, 7
+  ret i32 %4
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
@@ -162,7 +171,7 @@ define dso_local void @Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_nativ
   store ptr %0, ptr %3, align 8
   store ptr %1, ptr %4, align 8
   call void @llvm.memset.p0.i64(ptr align 4 %5, i8 0, i64 8, i1 false)
-  %6 = call i32 @source()
+  %6 = call i32 @source(i32 noundef 42)
   %7 = getelementptr inbounds [2 x i32], ptr %5, i64 0, i64 1
   store i32 %6, ptr %7, align 4
   %8 = getelementptr inbounds [2 x i32], ptr %5, i64 0, i64 1
@@ -182,7 +191,7 @@ define dso_local void @Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_nativ
   store ptr %0, ptr %3, align 8
   store ptr %1, ptr %4, align 8
   call void @llvm.memset.p0.i64(ptr align 4 %5, i8 0, i64 8, i1 false)
-  %6 = call i32 @source()
+  %6 = call i32 @source(i32 noundef 42)
   %7 = getelementptr inbounds [2 x i32], ptr %5, i64 0, i64 0
   store i32 %6, ptr %7, align 4
   %8 = getelementptr inbounds [2 x i32], ptr %5, i64 0, i64 1
@@ -300,11 +309,6 @@ define dso_local i32 @Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propag
   %30 = load i32, ptr %6, align 4
   %31 = call i32 (ptr, ptr, ptr, ...) %26(ptr noundef %27, ptr noundef %28, ptr noundef %29, i32 noundef %30)
   ret i32 %31
-}
-
-; Function Attrs: noinline nounwind optnone uwtable
-define dso_local i32 @source() #0 {
-  ret i32 42
 }
 
 declare dso_local i32 @printf(ptr noundef, ...) #2

@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <string.h>
 #include "TaintTest.h"
+
+
 JNIEXPORT int JNICALL
 Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_sum(JNIEnv *env, jobject obj, jint a, jint b) {
     return a + b;
@@ -9,7 +11,7 @@ Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_sum(JNIEnv *env, jobject obj
 
 JNIEXPORT int JNICALL
 Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1source(JNIEnv *env, jobject obj) {
-    return source() + 23;
+    return source(42) + 23;
 }
 
 JNIEXPORT int JNICALL
@@ -45,14 +47,14 @@ Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1zero_1to_1sink(JN
 JNIEXPORT void JNICALL
 Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_native_1array_1tainted(JNIEnv *env, jobject obj) {
     int array[2] = {0, 0};
-    array[1] = source();
+    array[1] = source(42);
     sink(array[1]);
 }
 
 JNIEXPORT void JNICALL
 Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_native_1array_1untainted(JNIEnv *env, jobject obj) {
     int array[2] = {0, 0};
-    array[0] = source();
+    array[0] = source(42);
     sink(array[1]);
 }
 
@@ -79,26 +81,31 @@ Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1java_1sanitize(JN
      return (*env)->CallIntMethod(env, obj, java_sanitize, a);
 }
 
+__attribute__((optnone))
 int
 identity(int a) {
     return a;
 }
 
+__attribute__((optnone))
 int
 zero(int a) {
     return 0;
 }
 
+__attribute__((optnone))
 int
-source() {
-    return 6*7;
+source(int a) {
+    return a*7;
 }
 
+__attribute__((optnone))
 void
 sink(int num) {
     printf("native %d\n", num);
 }
 
+__attribute__((optnone))
 int
 sanitize(int num) {
     return num - 19;

@@ -36,7 +36,7 @@ int identity(int a);
 
 int zero(int a);
 
-int source();
+int source(int a);
 
 void sink(int num);
 

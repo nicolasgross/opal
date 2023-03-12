@@ -43,8 +43,14 @@ abstract class AbstractCrossLanguageBackwardTaintAnalysisTest(llvmModule: String
     }
 }
 
-class CrossLanguageBackwardTaintAnalysisTest extends AbstractCrossLanguageBackwardTaintAnalysisTest(
-    "./DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/x86_64/TaintTest.ll",
+class CrossLanguageO0BackwardTaintAnalysisTest extends AbstractCrossLanguageBackwardTaintAnalysisTest(
+    "./DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/x86_64/TaintTest_O0.ll",
+    XlangBackwardFlowPath.PROPERTY_VALIDATOR_KEY,
+    NativeBackwardTaintAnalysisScheduler
+)
+
+class CrossLanguageO2BackwardTaintAnalysisTest extends AbstractCrossLanguageBackwardTaintAnalysisTest(
+    "./DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/x86_64/TaintTest_O2.ll",
     XlangBackwardFlowPath.PROPERTY_VALIDATOR_KEY,
     NativeBackwardTaintAnalysisScheduler
 )

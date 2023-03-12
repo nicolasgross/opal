@@ -35,8 +35,14 @@ abstract class AbstractCrossLanguageForwardTaintAnalysisTest(llvmModule: String,
     }
 }
 
-class CrossLanguageForwardTaintAnalysisTest extends AbstractCrossLanguageForwardTaintAnalysisTest(
-    "./DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/x86_64/TaintTest.ll",
+class CrossLanguageO0ForwardTaintAnalysisTest extends AbstractCrossLanguageForwardTaintAnalysisTest(
+    "./DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/x86_64/TaintTest_O0.ll",
+    XlangForwardFlowPath.PROPERTY_VALIDATOR_KEY,
+    NativeForwardTaintAnalysisScheduler
+)
+
+class CrossLanguageO2ForwardTaintAnalysisTest extends AbstractCrossLanguageForwardTaintAnalysisTest(
+    "./DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/x86_64/TaintTest_O2.ll",
     XlangForwardFlowPath.PROPERTY_VALIDATOR_KEY,
     NativeForwardTaintAnalysisScheduler
 )

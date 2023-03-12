@@ -21,7 +21,7 @@ public class TaintTest {
         private native int propagate_java_sanitize(int a);
         static
         {
-            System.loadLibrary ("tainttest");
+            System.loadLibrary ("tainttest_O0");
         }
         public static void main (String[] args)
         {
