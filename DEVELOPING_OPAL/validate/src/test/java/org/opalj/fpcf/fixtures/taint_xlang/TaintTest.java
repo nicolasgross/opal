@@ -7,7 +7,7 @@ import org.opalj.fpcf.properties.taint_xlang.*;
  * Add VM argument to run main: -Djava.library.path=DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/x86_64
  */
 public class TaintTest {
-        private native int sum (int a, int b);
+        private static native int sum (int a, int b);
         private native int propagate_source ();
         private native int propagate_sanitize (int a);
         private native int propagate_sink (int a);
@@ -17,6 +17,7 @@ public class TaintTest {
         private native void native_array_tainted();
         private native void native_array_untainted();
         private native void propagate_to_java_sink(int a);
+        private native void propagate_to_java_static_sink(int a);
         private native int propagate_from_java_source();
         private native int propagate_java_sanitize(int a);
         static
@@ -45,6 +46,7 @@ public class TaintTest {
             demo.test_native_array_tainted_flow();
             demo.test_native_array_untainted_no_flow();
             demo.test_native_call_java_sink_flow();
+            demo.test_native_call_java_static_sink_flow();
             demo.test_native_call_java_source_flow();
             demo.test_native_call_java_sanitize_no_flow();
             System.out.println("done");
@@ -202,6 +204,17 @@ public class TaintTest {
         public void test_native_call_java_sink_flow() {
             System.out.println("native call java sink");
             propagate_to_java_sink(source());
+        }
+
+        @XlangForwardFlowPath({"test_native_call_java_static_sink_flow", "Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1to_1java_1static_1sink", "sink"})
+        @XlangBackwardFlowPath({"test_native_call_java_static_sink_flow", "Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1to_1java_1static_1sink", "sink"})
+        @XlangMcSemaX8664ForwardFlowPath({"test_native_call_java_static_sink_flow", "Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1to_1java_1static_1sink", "sub_1ff01390_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1to_1java_1static_1sink", "sink"})
+        @XlangMcSemaX8664BackwardFlowPath({"test_native_call_java_static_sink_flow", "Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1to_1java_1static_1sink", "sub_1ff01390_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1to_1java_1static_1sink", "sink"})
+        @XlangMcSemaAarch64ForwardFlowPath({"test_native_call_java_static_sink_flow", "Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1to_1java_1static_1sink", "sub_1ff00f3c_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1to_1java_1static_1sink", "sink"})
+        @XlangMcSemaAarch64BackwardFlowPath({"test_native_call_java_static_sink_flow", "Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1to_1java_1static_1sink", "sub_1ff00f3c_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1to_1java_1static_1sink", "sink"})
+        public void test_native_call_java_static_sink_flow() {
+            System.out.println("native call java static sink");
+            propagate_to_java_static_sink(source());
         }
 
         @XlangForwardFlowPath({"test_native_call_java_source_flow", "sink"})

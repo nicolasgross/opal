@@ -13,7 +13,7 @@ object JNICallUtil {
      * @param isStatic whether the Java method is static.
      * @return the respective native parameter index in the JNICall.
      */
-    def javaParamIndexToNative(index: Int, isStatic: Boolean): Int = {
+    def javaParamIndexToJNICall(index: Int, isStatic: Boolean): Int = {
         // JNI call args if static: JNIEnv, class, method, arg 0, arg 1, ...
         // JNI call args if non-static: JNIEnv, this, method, arg 0, arg 1, ...
         if (isStatic) {
@@ -29,6 +29,20 @@ object JNICallUtil {
     }
 
     /**
+     * Converts a Java parameter index to a native JNI function parameter index (arg 0 == this if non-static).
+     *
+     * @param index the native JNICall parameter index.
+     * @param isStatic whether the Java method is static.
+     * @return the respective Java parameter index.
+     */
+    def javaParamIndexToNative(index: Int, isStatic: Boolean): Int = {
+        // JNI function args if static: JNIEnv, class, arg 0, arg 1, ...
+        // JNI function args if non-static: JNIEnv, this, arg 0, arg 1, ...
+        if (isStatic) index + 2
+        else index + 1
+    }
+
+    /**
      * Converts a native JNI function parameter index to a Java parameter index (arg 0 == this if non-static).
      *
      * @param index the native JNICall parameter index.
@@ -36,9 +50,10 @@ object JNICallUtil {
      * @return the respective Java parameter index.
      */
     def nativeParamIndexToJava(index: Int, isStatic: Boolean): Int = {
-        // JNI function args if static: JNIEnv, arg 0, arg 1, ...
+        // JNI function args if static: JNIEnv, class, arg 0, arg 1, ...
         // JNI function args if non-static: JNIEnv, this, arg 0, arg 1, ...
-        index - 1
+        if (isStatic) index - 2
+        else index - 1
     }
 
     /**

@@ -5,7 +5,7 @@
 
 
 JNIEXPORT int JNICALL
-Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_sum(JNIEnv *env, jobject obj, jint a, jint b) {
+Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_sum(JNIEnv *env, jclass jcls, jint a, jint b) {
     return a + b;
 }
 
@@ -67,6 +67,12 @@ Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1to_1java_1sink(JN
     (*env)->CallVoidMethod(env, obj, java_sink, a);
 }
 
+JNIEXPORT void JNICALL
+Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1to_1java_1static_1sink(JNIEnv *env, jclass jcls, jint a) {
+    jmethodID java_sink = (*env)->GetMethodID(env, jcls, "sink", "(I)V");
+    (*env)->CallStaticVoidMethod(env, jcls, java_sink, a);
+}
+
 JNIEXPORT int JNICALL
 Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1from_1java_1source(JNIEnv *env, jobject obj) {
      jclass klass = (*env)->GetObjectClass(env, obj);
@@ -76,7 +82,7 @@ Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1from_1java_1sourc
 
 JNIEXPORT int JNICALL
 Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1java_1sanitize(JNIEnv *env, jobject obj, jint a) {
-     jclass klass = (*env)->GetObjectClass(env, obj);
+     jclass klass = (*env)->FindClass(env, "org/opalj/fpcf/fixtures/taint_xlang/TaintTest");
      jmethodID java_sanitize = (*env)->GetMethodID(env, klass, "indirect_sanitize", "(I)I");
      return (*env)->CallIntMethod(env, obj, java_sanitize, a);
 }

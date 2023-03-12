@@ -436,7 +436,7 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
         def taintActualIfFormal(index: Int): Set[NativeTaintFact] = {
             if (index > -1) Set.empty // tac parameter indices are < 0, index is no parameter
             val javaParamIndex = JavaIFDSProblem.switchParamAndVariableIndex(index, callee.isStatic)
-            val nativeParamIndex = JNICallUtil.javaParamIndexToNative(javaParamIndex, callee.isStatic)
+            val nativeParamIndex = JNICallUtil.javaParamIndexToJNICall(javaParamIndex, callee.isStatic)
             Set(NativeVariable(callInstr.argument(nativeParamIndex).get))
         }
 

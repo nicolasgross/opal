@@ -4,7 +4,7 @@ package org.opalj.ll.fpcf.analyses.ifds.taint
 import org.opalj.br.analyses.SomeProject
 import org.opalj.fpcf.{PropertyBounds, PropertyKey, PropertyStore}
 import org.opalj.ifds.{Callable, IFDSFact, IFDSPropertyMetaInformation}
-import org.opalj.ll.fpcf.analyses.ifds.{LLVMFunction, LLVMStatement, McSemaUtil, NativeFunction, NativeIFDSAnalysis, NativeIFDSAnalysisScheduler}
+import org.opalj.ll.fpcf.analyses.ifds.{JNIMethod, LLVMFunction, LLVMStatement, McSemaUtil, NativeFunction, NativeIFDSAnalysis, NativeIFDSAnalysisScheduler}
 import org.opalj.ll.fpcf.properties.NativeTaint
 import org.opalj.ll.llvm.value.Call
 import org.opalj.tac.fpcf.properties.Taint
@@ -39,17 +39,18 @@ class SimpleNativeForwardTaintProblem(ptrAliasDefs: Map[String, List[Set[String]
         else Set.empty
 
     override protected def createFlowFact(call: LLVMStatement, in: NativeTaintFact): Option[NativeFlowFact] = {
-        icfg.getCalleesIfCallStatement(call).get.filter(_.isInstanceOf[LLVMFunction]).foreach(c => {
-            val callee = c.asInstanceOf[LLVMFunction]
+        icfg.getCalleesIfCallStatement(call).get.foreach(callee => {
             val callInstr = call.instruction.asInstanceOf[Call]
             if (callee.name == "sink") in match {
-                case NativeVariable(value) if value == callInstr.argument(0).get =>
+                case NativeVariable(value) if callee.isInstanceOf[LLVMFunction] && value == callInstr.argument(0).get =>
+                    return Some(NativeFlowFact(Seq(call.callable, callee)))
+                case NativeVariable(value) if callee.isInstanceOf[JNIMethod] && value == callInstr.argument(3).get => // params: JNIEnv, class/obj, method, arg 0
                     return Some(NativeFlowFact(Seq(call.callable, callee)))
                 case _ =>
             }
             else if (McSemaUtil.matchesMcSemaFunctionName(callee.name, "sink")) in match {
                 case NativeArrayElement(base, indices) if base == callInstr.argument(0).get &&
-                    indices == McSemaUtil.getFirstArgRegIndices(callee.function.module.targetTriple) =>
+                    indices == McSemaUtil.getFirstArgRegIndices(call.function.function.module.targetTriple) =>
                     return Some(NativeFlowFact(Seq(call.callable, callee)))
                 case _ =>
             }

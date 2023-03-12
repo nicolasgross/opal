@@ -107,10 +107,10 @@ class SimpleJavaForwardTaintProblem(p: SomeProject) extends JavaForwardTaintProb
      *         the facts in `in` held before `statement` and `statement` calls `callee`.
      */
     private def nativeCallFlow(
-        call:         JavaStatement,
-        callee:       LLVMFunction,
-        in:           TaintFact,
-        nativeCallee: Method
+        call:       JavaStatement,
+        callee:     LLVMFunction,
+        in:         TaintFact,
+        javaCallee: Method
     ): Set[NativeTaintFact] = {
         val callObject = JavaIFDSProblem.asCall(call.stmt)
         val allParams = callObject.allParams
@@ -121,7 +121,8 @@ class SimpleJavaForwardTaintProblem(p: SomeProject) extends JavaForwardTaintProb
                 allParamsWithIndices.flatMap {
                     case (param, paramIndex) if param.asVar.definedBy.contains(index) =>
                         // TODO: this is passed
-                        Some(NativeVariable(callee.function.argument(paramIndex + 1))) // offset JNIEnv
+                        Some(NativeVariable(callee.function.argument(
+                            JNICallUtil.javaParamIndexToNative(paramIndex, javaCallee.isStatic))))
                     case _ => None // Nothing to do
                 }.toSet
 
@@ -129,7 +130,8 @@ class SimpleJavaForwardTaintProblem(p: SomeProject) extends JavaForwardTaintProb
             case ArrayElement(index, taintedIndex) =>
                 allParamsWithIndices.flatMap {
                     case (param, paramIndex) if param.asVar.definedBy.contains(index) =>
-                        Some(NativeVariable(callee.function.argument(paramIndex + 1))) // offset JNIEnv
+                        Some(NativeVariable(callee.function.argument(
+                            JNICallUtil.javaParamIndexToNative(paramIndex, javaCallee.isStatic))))
                     case _ => None // Nothing to do
                 }.toSet
 
@@ -138,7 +140,9 @@ class SimpleJavaForwardTaintProblem(p: SomeProject) extends JavaForwardTaintProb
                 // Only if the formal parameter is of a type that may have that field!
                 allParamsWithIndices.flatMap {
                     case (param, paramIndex) if param.asVar.definedBy.contains(index) =>
-                        Some(JavaInstanceField(paramIndex + 1, declaredClass, taintedField)) // TODO subtype check
+                        Some(JavaInstanceField(
+                            JNICallUtil.javaParamIndexToNative(paramIndex, javaCallee.isStatic),
+                            declaredClass, taintedField)) // TODO subtype check
                     case _ => None // Nothing to do
                 }.toSet
 
