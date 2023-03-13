@@ -48,7 +48,7 @@ class CrossLanguageO2ForwardTaintAnalysisTest extends AbstractCrossLanguageForwa
 )
 
 class CrossLanguageMcSemaX8664ForwardTaintAnalysisTest extends AbstractCrossLanguageForwardTaintAnalysisTest(
-    "./DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/x86_64/lifted_mcsema.ll",
+    "./DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/x86_64/libtainttest_clang_O0_mcsema.ll",
     XlangMcSemaX8664ForwardFlowPath.PROPERTY_VALIDATOR_KEY,
     NativeMcSemaX8664ForwardTaintAnalysisScheduler
 )

@@ -67,11 +67,11 @@ class SimpleNativeForwardTaintAnalysis(project: SomeProject)
 
 class SimpleNativeMcSemaX8664ForwardTaintAnalysis(project: SomeProject)
     extends NativeIFDSAnalysis(project, new SimpleNativeForwardTaintProblem(Map(
-        "sub_1ff01290_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1identity_1to_1sink" ->
+        "sub_1ff012b0_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1identity_1to_1sink" ->
             List(Set("%RAX_ptr", "%EAX_ptr")),
-        "sub_1ff01250_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_sanitize_1only_1a_1into_1sink" ->
+        "sub_1ff01270_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_sanitize_1only_1a_1into_1sink" ->
             List(Set("%33", "%42", "%75")),
-        "sub_1ff01310_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_native_1array_1tainted" ->
+        "sub_1ff01330_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_native_1array_1tainted" ->
             List(Set("%RAX_ptr", "%EAX_ptr")),
         "sub_1ff01190_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1source" ->
             List(Set("%RAX_ptr", "%EAX_ptr"))
