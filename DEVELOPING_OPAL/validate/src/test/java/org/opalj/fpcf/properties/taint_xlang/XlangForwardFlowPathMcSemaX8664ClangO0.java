@@ -5,13 +5,13 @@ import org.opalj.fpcf.properties.PropertyValidator;
 
 import java.lang.annotation.*;
 
-@PropertyValidator(key = XlangMcSemaX8664BackwardFlowPath.PROPERTY_VALIDATOR_KEY, validator = XlangBackwardFlowPathMatcher.class)
+@PropertyValidator(key = XlangForwardFlowPathMcSemaX8664ClangO0.PROPERTY_VALIDATOR_KEY, validator = XlangForwardFlowPathMatcher.class)
 @Target(ElementType.METHOD)
 @Documented
 @Retention(RetentionPolicy.CLASS)
-public @interface XlangMcSemaX8664BackwardFlowPath {
+public @interface XlangForwardFlowPathMcSemaX8664ClangO0 {
 
-    String PROPERTY_VALIDATOR_KEY = "XlangMcSemaX8664BackwardFlowPath";
+    String PROPERTY_VALIDATOR_KEY = "XlangForwardFlowPathMcSemaX8664ClangO0";
 
     String[] value();
 }
