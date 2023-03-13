@@ -55,6 +55,15 @@ sealed abstract class MethodDescriptor
             .mkString("(", "", ")"+returnType.toJVMTypeName)
     }
 
+    /**
+     * Same as toJVMDescriptor but only contains the parameter signature.
+     */
+    def toArgJVMDescriptor: String = {
+        parameterTypes.iterator
+            .map[String](_.toJVMTypeName)
+            .mkString
+    }
+
     def value: this.type = this
 
     override def runtimeValueType: ObjectType = ObjectType.MethodType

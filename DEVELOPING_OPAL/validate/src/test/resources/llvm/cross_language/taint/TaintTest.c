@@ -74,10 +74,20 @@ Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1to_1java_1static_
 }
 
 JNIEXPORT int JNICALL
-Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1from_1java_1source(JNIEnv *env, jobject obj) {
+Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1from_1java_1source__(JNIEnv *env, jobject obj) {
      jclass klass = (*env)->GetObjectClass(env, obj);
      jmethodID java_source = (*env)->GetMethodID(env, klass, "indirect_source", "()I");
      return (*env)->CallIntMethod(env, obj, java_source);
+}
+
+JNIEXPORT int JNICALL
+Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1from_1java_1source__I(JNIEnv *env, jobject obj, jint a) {
+     return 24;
+}
+
+JNIEXPORT int JNICALL
+Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1from_1java_1source__Ljava_lang_String_2(JNIEnv *env, jobject obj, jstring s) {
+     return 42;
 }
 
 JNIEXPORT int JNICALL
@@ -113,7 +123,7 @@ __attribute__((optnone))
 __attribute__((optimize(0)))
 #endif
 int
-source(int a) {
+source(int a) { // parameter a to prevent constant optimization
     return a*7;
 }
 

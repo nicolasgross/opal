@@ -62,31 +62,48 @@ object JNICallUtil {
      * https://docs.oracle.com/en/java/javase/13/docs/specs/jni/design.html#resolving-native-method-names
      *
      * @param nativeMethod the 'native' tagged Java method.
-     * @return the resolved function name.
+     * @return the resolved function name, first one without parameter signature, second one with parameter signature.
      */
-    def resolveNativeFunctionName(nativeMethod: Method): String = {
-        val calleeName = nativeMethod.name.map {
+    def resolveNativeFunctionName(nativeMethod: Method): (String, String) = {
+        def mangle(in: String): String = in.map {
             case c if isAlphaNumeric(c) => c
+            case '/'                    => "_"
             case '_'                    => "_1"
             case ';'                    => "_2"
             case '['                    => "_3"
             case c                      => s"_${c.toInt.toHexString.reverse.padTo(4, '0').reverse}"
         }.mkString
-        val classFile = nativeMethod.classFile.fqn
-            .replace("_", "_1")
-            .replace('/', '_')
-        "Java_"+classFile+"_"+calleeName
+        val calleeName = mangle(nativeMethod.name)
+        val classFile = mangle(nativeMethod.classFile.fqn)
+        val mangledSignature = mangle(nativeMethod.signature.descriptor.toArgJVMDescriptor)
+        ("Java_"+classFile+"_"+calleeName, "Java_"+classFile+"_"+calleeName+"__"+mangledSignature)
     }
 
     /**
-     * Resolves a native function to the class and method name of the corresponding Java companion method.
+     * Resolves a native function to the class name, method name, and optionally signature of the corresponding
+     * Java companion method.
      *
      * @param nativeFunction the native function from the .so file.
-     * @return A tuple (fqn, method name) if function has native Java companion, otherwise None.
+     * @return A tuple (fqn, method name, Option[signature]) if function has native Java companion, otherwise None.
      */
-    def resolveNativeMethodName(nativeFunction: LLVMFunction): Option[(String, String)] = {
+    def resolveNativeMethodName(nativeFunction: LLVMFunction): Option[(String, String, Option[String])] = {
         if (!nativeFunction.name.startsWith("Java_")) return None
-        val nameWithoutJava = nativeFunction.name.substring(5)
+
+        // extract signature
+        val signature =
+            if (nativeFunction.name.contains("__")) {
+                val mangledSign = nativeFunction.name.split("__")
+                if (mangledSign.length == 1) Some("")
+                else {
+                    val signDecoded =
+                        "_([^1-3])".r.replaceAllIn(mangledSign(1), m => "/"+m.group(1)) // replace _ by / if _ is not followed by 1,2 or 3
+                            .replace("_1", "_")
+                            .replace("_2", ";")
+                            .replace("_3", "[")
+                    Some(signDecoded)
+                }
+            } else None
+        val nameWithoutJava = nativeFunction.name.split("__")(0).substring(5)
 
         // split class name and method name
         var lastCharWasDigit = true
@@ -101,9 +118,9 @@ object JNICallUtil {
         val parts = nameWithoutJava.splitAt(methodNameIndex)
 
         // decode class name
-        val fqnDecoded = "_([^0-9])".r
-            .replaceAllIn(parts._1, m => "/"+m.group(1))
-            .replace("_1", "_")
+        val fqnDecoded =
+            "_([^1-3])".r.replaceAllIn(parts._1, m => "/"+m.group(1)) // replace _ by / if _ is not followed by 1,2 or 3
+                .replace("_1", "_")
 
         // decode method name
         val tmpMethodDecoded = parts._2.substring(1)
@@ -114,7 +131,7 @@ object JNICallUtil {
         val methodDecoded = regexHexEnc
             .replaceAllIn(tmpMethodDecoded, m => Integer.parseInt(m.group(1), 16).toChar.toString)
 
-        Some((fqnDecoded, methodDecoded))
+        Some((fqnDecoded, methodDecoded, signature))
     }
 
     private def isAlphaNumeric(char: Char): Boolean = {

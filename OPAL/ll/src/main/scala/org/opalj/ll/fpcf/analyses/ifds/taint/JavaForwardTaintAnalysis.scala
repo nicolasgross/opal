@@ -65,7 +65,10 @@ class SimpleJavaForwardTaintProblem(p: SomeProject) extends JavaForwardTaintProb
     override def outsideAnalysisContextCall(callee: Method): Option[OutsideAnalysisContextCallHandler] = {
         def handleNativeMethod(call: JavaStatement, successor: Option[JavaStatement], in: TaintFact, unbCallChain: Seq[Callable], dependeesGetter: Getter): Set[TaintFact] = {
             val nativeFunctionName = JNICallUtil.resolveNativeFunctionName(callee)
-            val function = LLVMFunction(llvmProject.function(nativeFunctionName).get)
+            val function = llvmProject.function(nativeFunctionName._1) match {
+                case Some(f) => LLVMFunction(f)
+                case None    => LLVMFunction(llvmProject.function(nativeFunctionName._2).get)
+            }
             var result = Set.empty[TaintFact]
             val entryFacts = nativeCallFlow(call, function, in, callee).map(new IFDSFact(_))
             for (entryFact <- entryFacts) { // ifds line 14
@@ -122,7 +125,8 @@ class SimpleJavaForwardTaintProblem(p: SomeProject) extends JavaForwardTaintProb
                     case (param, paramIndex) if param.asVar.definedBy.contains(index) =>
                         // TODO: this is passed
                         Some(NativeVariable(callee.function.argument(
-                            JNICallUtil.javaParamIndexToNative(paramIndex, javaCallee.isStatic))))
+                            JNICallUtil.javaParamIndexToNative(paramIndex, javaCallee.isStatic)
+                        )))
                     case _ => None // Nothing to do
                 }.toSet
 
@@ -131,7 +135,8 @@ class SimpleJavaForwardTaintProblem(p: SomeProject) extends JavaForwardTaintProb
                 allParamsWithIndices.flatMap {
                     case (param, paramIndex) if param.asVar.definedBy.contains(index) =>
                         Some(NativeVariable(callee.function.argument(
-                            JNICallUtil.javaParamIndexToNative(paramIndex, javaCallee.isStatic))))
+                            JNICallUtil.javaParamIndexToNative(paramIndex, javaCallee.isStatic)
+                        )))
                     case _ => None // Nothing to do
                 }.toSet
 
@@ -142,7 +147,8 @@ class SimpleJavaForwardTaintProblem(p: SomeProject) extends JavaForwardTaintProb
                     case (param, paramIndex) if param.asVar.definedBy.contains(index) =>
                         Some(JavaInstanceField(
                             JNICallUtil.javaParamIndexToNative(paramIndex, javaCallee.isStatic),
-                            declaredClass, taintedField)) // TODO subtype check
+                            declaredClass, taintedField
+                        )) // TODO subtype check
                     case _ => None // Nothing to do
                 }.toSet
 

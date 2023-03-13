@@ -296,11 +296,12 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
                                        dependeesGetter: Getter): Unit = {
             // find calls of native function in java code
             val llvmCallee = callee.asInstanceOf[LLVMFunction]
-            val (fqn, javaMethodName) = JNICallUtil.resolveNativeMethodName(llvmCallee).get
+            val (fqn, javaMethodName, signature) = JNICallUtil.resolveNativeMethodName(llvmCallee).get
             val javaCompanions = project.allProjectClassFiles
                 .filter(classFile => classFile.thisType.fqn == fqn)
                 .flatMap(_.methods)
-                .filter(_.name == javaMethodName)
+                .filter(m => m.name == javaMethodName && (signature.isEmpty ||
+                    (signature.isDefined && m.signature.descriptor.toArgJVMDescriptor == signature.get)))
             val javaCalls = javaCompanions.flatMap(comp => javaICFG.getCallers(comp).map((_, comp)))
 
             for ((callStmt, comp) <- javaCalls) {

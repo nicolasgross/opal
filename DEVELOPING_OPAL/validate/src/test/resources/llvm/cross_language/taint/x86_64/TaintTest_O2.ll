@@ -149,7 +149,7 @@ define dso_local void @Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propa
 }
 
 ; Function Attrs: nounwind uwtable
-define dso_local i32 @Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1from_1java_1source(ptr noundef %0, ptr noundef %1) local_unnamed_addr #1 {
+define dso_local i32 @Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1from_1java_1source__(ptr noundef %0, ptr noundef %1) local_unnamed_addr #1 {
   %3 = load ptr, ptr %0, align 8, !tbaa !7
   %4 = getelementptr inbounds %struct.JNINativeInterface_, ptr %3, i64 0, i32 31
   %5 = load ptr, ptr %4, align 8, !tbaa !9
@@ -163,6 +163,16 @@ define dso_local i32 @Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propag
   %13 = load ptr, ptr %12, align 8, !tbaa !15
   %14 = tail call i32 (ptr, ptr, ptr, ...) %13(ptr noundef nonnull %0, ptr noundef %1, ptr noundef %10) #4
   ret i32 %14
+}
+
+; Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn uwtable
+define dso_local i32 @Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1from_1java_1source__I(ptr nocapture noundef readnone %0, ptr nocapture noundef readnone %1, i32 noundef %2) local_unnamed_addr #0 {
+  ret i32 24
+}
+
+; Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn uwtable
+define dso_local i32 @Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1from_1java_1source__Ljava_lang_String_2(ptr nocapture noundef readnone %0, ptr nocapture noundef readnone %1, ptr nocapture noundef readnone %2) local_unnamed_addr #0 {
+  ret i32 42
 }
 
 ; Function Attrs: nounwind uwtable

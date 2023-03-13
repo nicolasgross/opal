@@ -270,7 +270,7 @@ define dso_local void @Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propa
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local i32 @Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1from_1java_1source(ptr noundef %0, ptr noundef %1) #0 {
+define dso_local i32 @Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1from_1java_1source__(ptr noundef %0, ptr noundef %1) #0 {
   %3 = alloca ptr, align 8
   %4 = alloca ptr, align 8
   %5 = alloca ptr, align 8
@@ -302,6 +302,28 @@ define dso_local i32 @Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propag
   %27 = load ptr, ptr %6, align 8
   %28 = call i32 (ptr, ptr, ptr, ...) %24(ptr noundef %25, ptr noundef %26, ptr noundef %27)
   ret i32 %28
+}
+
+; Function Attrs: noinline nounwind optnone uwtable
+define dso_local i32 @Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1from_1java_1source__I(ptr noundef %0, ptr noundef %1, i32 noundef %2) #0 {
+  %4 = alloca ptr, align 8
+  %5 = alloca ptr, align 8
+  %6 = alloca i32, align 4
+  store ptr %0, ptr %4, align 8
+  store ptr %1, ptr %5, align 8
+  store i32 %2, ptr %6, align 4
+  ret i32 24
+}
+
+; Function Attrs: noinline nounwind optnone uwtable
+define dso_local i32 @Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1from_1java_1source__Ljava_lang_String_2(ptr noundef %0, ptr noundef %1, ptr noundef %2) #0 {
+  %4 = alloca ptr, align 8
+  %5 = alloca ptr, align 8
+  %6 = alloca ptr, align 8
+  store ptr %0, ptr %4, align 8
+  store ptr %1, ptr %5, align 8
+  store ptr %2, ptr %6, align 8
+  ret i32 42
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable

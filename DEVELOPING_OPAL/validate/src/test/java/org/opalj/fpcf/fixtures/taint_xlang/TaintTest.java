@@ -19,6 +19,8 @@ public class TaintTest {
         private native void propagate_to_java_sink(int a);
         private static native void propagate_to_java_static_sink(int a);
         private native int propagate_from_java_source();
+        private native int propagate_from_java_source(int a);
+        private native int propagate_from_java_source(String s);
         private native int propagate_java_sanitize(int a);
         static
         {
@@ -47,7 +49,9 @@ public class TaintTest {
             demo.test_native_array_untainted_no_flow();
             demo.test_native_call_java_sink_flow();
             demo.test_native_call_java_static_sink_flow();
-            demo.test_native_call_java_source_flow();
+            demo.test_native_call_java_overloaded_source_flow();
+            demo.test_native_call_java_overloaded_source_no_flow_1();
+            demo.test_native_call_java_overloaded_source_no_flow_2();
             demo.test_native_call_java_sanitize_no_flow();
             System.out.println("done");
         }
@@ -217,15 +221,37 @@ public class TaintTest {
             propagate_to_java_static_sink(source());
         }
 
-        @XlangForwardFlowPath({"test_native_call_java_source_flow", "sink"})
-        @XlangBackwardFlowPath({"test_native_call_java_source_flow", "sink"})
-        @XlangMcSemaX8664ForwardFlowPath({"test_native_call_java_source_flow", "sink"})
-        @XlangMcSemaX8664BackwardFlowPath({"test_native_call_java_source_flow", "sink"})
-        @XlangMcSemaAarch64ForwardFlowPath({"test_native_call_java_source_flow", "sink"})
-        @XlangMcSemaAarch64BackwardFlowPath({"test_native_call_java_source_flow", "sink"})
-        public void test_native_call_java_source_flow() {
-            System.out.println("native call java source");
+        @XlangForwardFlowPath({"test_native_call_java_overloaded_source_flow", "sink"})
+        @XlangBackwardFlowPath({"test_native_call_java_overloaded_source_flow", "sink"})
+        @XlangMcSemaX8664ForwardFlowPath({"test_native_call_java_overloaded_source_flow", "sink"})
+        @XlangMcSemaX8664BackwardFlowPath({"test_native_call_java_overloaded_source_flow", "sink"})
+        @XlangMcSemaAarch64ForwardFlowPath({"test_native_call_java_overloaded_source_flow", "sink"})
+        @XlangMcSemaAarch64BackwardFlowPath({"test_native_call_java_overloaded_source_flow", "sink"})
+        public void test_native_call_java_overloaded_source_flow() {
+            System.out.println("native call overloaded java source no params");
             sink(propagate_from_java_source());
+        }
+
+        @XlangForwardFlowPath({})
+        @XlangBackwardFlowPath({})
+        @XlangMcSemaX8664ForwardFlowPath({})
+        @XlangMcSemaX8664BackwardFlowPath({})
+        @XlangMcSemaAarch64ForwardFlowPath({})
+        @XlangMcSemaAarch64BackwardFlowPath({})
+        public void test_native_call_java_overloaded_source_no_flow_1() {
+            System.out.println("native call overloaded java source int param");
+            sink(propagate_from_java_source(42));
+        }
+
+        @XlangForwardFlowPath({})
+        @XlangBackwardFlowPath({})
+        @XlangMcSemaX8664ForwardFlowPath({})
+        @XlangMcSemaX8664BackwardFlowPath({})
+        @XlangMcSemaAarch64ForwardFlowPath({})
+        @XlangMcSemaAarch64BackwardFlowPath({})
+        public void test_native_call_java_overloaded_source_no_flow_2() {
+            System.out.println("native call overloaded java source string param");
+            sink(propagate_from_java_source("test"));
         }
 
         @XlangForwardFlowPath({})
