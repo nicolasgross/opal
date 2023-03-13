@@ -30,16 +30,16 @@ object JNICallDetectionAnalysis {
     def analyze(call: Call, project: SomeProject): Option[Set[Method]] = {
         implicit val declaredMethods: DeclaredMethods = project.get(DeclaredMethodsKey)
 
-        resolveJNIFunction(call, project) match {
+        resolveJNIFunction(call) match {
             case Some(Symbol("CallTypeMethod")) =>
-                resolveMethodId(call.operand(2), false, project) match { // methodID is the third parameter
+                resolveMethodId(call.operand(2), false) match { // methodID is the third parameter
                     case None =>
                         OPALLogger.warn(LogCategory, s"called method in JNI call could not be resolved: $call in ${call.function}")
                         None
                     case methods => methods
                 }
             case Some(Symbol("CallStaticTypeMethod")) =>
-                resolveMethodId(call.operand(2), true, project) match { // methodID is the third parameter
+                resolveMethodId(call.operand(2), true) match { // methodID is the third parameter
                     case None =>
                         OPALLogger.warn(LogCategory, s"called method in JNI call could not be resolved: $call in ${call.function}")
                         None
@@ -49,7 +49,7 @@ object JNICallDetectionAnalysis {
         }
     }
 
-    private def resolveJNIFunction(call: Call, project: SomeProject): Option[Symbol] = {
+    private def resolveJNIFunction(call: Call): Option[Symbol] = {
         val loadFuncPtr: Load = call.calledValue match {
             case load: Load => load
             case itp: IntToPtr => itp.convVal match {
@@ -117,15 +117,15 @@ object JNICallDetectionAnalysis {
         case _ => None
     }
 
-    private def resolveMethodId(methodId: Value, isStatic: Boolean, project: SomeProject)(implicit declaredMethods: DeclaredMethods): Option[Set[Method]] = {
+    private def resolveMethodId(methodId: Value, isStatic: Boolean)(implicit declaredMethods: DeclaredMethods): Option[Set[Method]] = {
         val getMethodIDCall = getOriginCall(methodId) match {
             case Some(call) => call
             case None       => return None
         }
-        val jniFunction = resolveJNIFunction(getMethodIDCall, project)
+        val jniFunction = resolveJNIFunction(getMethodIDCall)
         if (jniFunction.isEmpty || (!isStatic && jniFunction.get != Symbol("GetMethodId"))
             || (isStatic && jniFunction.get != Symbol("GetStaticMethodId"))) return None
-        val clazz = resolveClass(getMethodIDCall.operand(1), LLVMFunction(getMethodIDCall.function), isStatic, project) match { // class is the second parameter
+        val clazz = resolveClass(getMethodIDCall.operand(1), LLVMFunction(getMethodIDCall.function), isStatic) match { // class is the second parameter
             case Some(clazz) if clazz.isEmpty => None // class name could not be recovered
             case Some(clazz)                  => Some(clazz) // class name was recovered
             case None                         => return None // seems not to be a JNI call
@@ -168,8 +168,8 @@ object JNICallDetectionAnalysis {
         case _ => None
     }
 
-    private def resolveClass(clazz: Value, function: LLVMFunction, isStatic: Boolean, project: SomeProject): Option[String] = getOriginCall(clazz) match {
-        case Some(call) => resolveJNIFunction(call, project) match {
+    private def resolveClass(clazz: Value, function: LLVMFunction, isStatic: Boolean): Option[String] = getOriginCall(clazz) match {
+        case Some(call) => resolveJNIFunction(call) match {
             case Some(Symbol("GetObjectClass")) =>
                 JNICallUtil.resolveNativeMethodName(function) match {
                     // caller is JNI function (detect by function name) and class is taken from callers second arg (this reference):
