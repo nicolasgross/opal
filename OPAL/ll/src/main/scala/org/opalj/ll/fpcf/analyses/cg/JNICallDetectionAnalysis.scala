@@ -123,7 +123,8 @@ object JNICallDetectionAnalysis {
             case None       => return None
         }
         val jniFunction = resolveJNIFunction(getMethodIDCall, project)
-        if (jniFunction.isEmpty || jniFunction.get != Symbol("GetMethodId")) return None
+        if (jniFunction.isEmpty || (!isStatic && jniFunction.get != Symbol("GetMethodId"))
+            || (isStatic && jniFunction.get != Symbol("GetStaticMethodId"))) return None
         val clazz = resolveClass(getMethodIDCall.operand(1), LLVMFunction(getMethodIDCall.function), isStatic, project) match { // class is the second parameter
             case Some(clazz) if clazz.isEmpty => None // class name could not be recovered
             case Some(clazz)                  => Some(clazz) // class name was recovered
@@ -191,6 +192,7 @@ object JNICallDetectionAnalysis {
     private def resolveValueIsSecondArg(obj: Value): Boolean = obj match {
         // in compiled LLVM IR, obj could be tracked to the function's args
         // not trivially possible in McSema lifted code, where args are passed via state struct
+        case arg: Argument if arg.index == 1 => true
         case load: Load => closestStoreToLoad(load) match {
             case Some(store) => store.src match {
                 case arg: Argument if arg.index == 1 => true
