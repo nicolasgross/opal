@@ -17,12 +17,12 @@ public class TaintTest {
         private native void native_array_tainted();
         private native void native_array_untainted();
         private native void propagate_to_java_sink(int a);
-        private native void propagate_to_java_static_sink(int a);
+        private static native void propagate_to_java_static_sink(int a);
         private native int propagate_from_java_source();
         private native int propagate_java_sanitize(int a);
         static
         {
-            System.loadLibrary ("tainttest_O0");
+            System.loadLibrary ("tainttest_clang_O0");
         }
         public static void main (String[] args)
         {

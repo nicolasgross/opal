@@ -69,7 +69,7 @@ Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1to_1java_1sink(JN
 
 JNIEXPORT void JNICALL
 Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1to_1java_1static_1sink(JNIEnv *env, jclass jcls, jint a) {
-    jmethodID java_sink = (*env)->GetMethodID(env, jcls, "sink", "(I)V");
+    jmethodID java_sink = (*env)->GetStaticMethodID(env, jcls, "sink", "(I)V");
     (*env)->CallStaticVoidMethod(env, jcls, java_sink, a);
 }
 
@@ -87,31 +87,51 @@ Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1java_1sanitize(JN
      return (*env)->CallIntMethod(env, obj, java_sanitize, a);
 }
 
+#ifdef __clang__
 __attribute__((optnone))
+#else
+__attribute__((optimize(0)))
+#endif
 int
 identity(int a) {
     return a;
 }
 
+#ifdef __clang__
 __attribute__((optnone))
+#else
+__attribute__((optimize(0)))
+#endif
 int
 zero(int a) {
     return 0;
 }
 
+#ifdef __clang__
 __attribute__((optnone))
+#else
+__attribute__((optimize(0)))
+#endif
 int
 source(int a) {
     return a*7;
 }
 
+#ifdef __clang__
 __attribute__((optnone))
+#else
+__attribute__((optimize(0)))
+#endif
 void
 sink(int num) {
     printf("native %d\n", num);
 }
 
+#ifdef __clang__
 __attribute__((optnone))
+#else
+__attribute__((optimize(0)))
+#endif
 int
 sanitize(int num) {
     return num - 19;
