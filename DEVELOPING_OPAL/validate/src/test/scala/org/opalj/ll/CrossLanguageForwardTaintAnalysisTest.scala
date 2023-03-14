@@ -3,7 +3,7 @@ package org.opalj.ll
 
 import org.opalj.br.analyses.Project
 import org.opalj.fpcf.PropertiesTest
-import org.opalj.fpcf.properties.taint_xlang.{XlangForwardFlowPath, XlangForwardFlowPathMcSemaAarch64ClangO0, XlangForwardFlowPathMcSemaAarch64ClangO2, XlangForwardFlowPathMcSemaX8664ClangO0, XlangForwardFlowPathMcSemaX8664ClangO2, XlangForwardFlowPathMcSemaX8664GccO0, XlangForwardFlowPathMcSemaX8664GccO2}
+import org.opalj.fpcf.properties.taint_xlang.{XlangForwardFlowPath, XlangForwardFlowPathMcSemaAarch64ClangO0, XlangForwardFlowPathMcSemaAarch64ClangO2, XlangForwardFlowPathMcSemaAarch64GccO0, XlangForwardFlowPathMcSemaX8664ClangO0, XlangForwardFlowPathMcSemaX8664ClangO2, XlangForwardFlowPathMcSemaX8664GccO0, XlangForwardFlowPathMcSemaX8664GccO2}
 import org.opalj.ifds.IFDSFact
 import org.opalj.ll.fpcf.analyses.ifds.NativeIFDSAnalysisScheduler
 import org.opalj.ll.fpcf.analyses.ifds.taint.{JavaForwardTaintAnalysisScheduler, NativeForwardTaintAnalysisScheduler, NativeTaintFact}
@@ -146,5 +146,20 @@ class CrossLanguageForwardTaintAnalysisMcSemaAarch64ClangO2Test extends Abstract
             List(Set("%X19_ptr", "%W19_ptr")),
         "sub_1ff01060_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1to_1java_1static_1sink" ->
             List(Set("%X19_ptr", "%W19_ptr"))
+    ))
+)
+
+class CrossLanguageForwardTaintAnalysisMcSemaAarch64GccO0Test extends AbstractCrossLanguageForwardTaintAnalysisTest(
+    "./DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/aarch64/libtainttest_gcc_O0_mcsema.ll",
+    XlangForwardFlowPathMcSemaAarch64GccO0.PROPERTY_VALIDATOR_KEY,
+    new NativeForwardTaintAnalysisScheduler(Map(
+        "sub_1ff00e9c_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1identity_1to_1sink" ->
+            List(Set("%X0_ptr", "%W0_ptr")),
+        "sub_1ff00e5c_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_sanitize_1only_1a_1into_1sink" ->
+            List(Set("%2", "%10", "%20")),
+        "sub_1ff00f04_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_native_1array_1tainted" ->
+            List(Set("%X0_ptr", "%W0_ptr")),
+        "sub_1ff00dec_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1source" ->
+            List(Set("%X0_ptr", "%W0_ptr"))
     ))
 )
