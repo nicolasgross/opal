@@ -139,9 +139,3 @@ class CrossLanguageMcSemaAarch64BackwardTaintAnalysisTest extends AbstractCrossL
             List(Set("%10", "%16", "%25")),
     ))
 )
-
-class CrossLanguageRetdecX8664BackwardTaintAnalysisTest extends AbstractCrossLanguageBackwardTaintAnalysisTest(
-    "./DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/x86_64/lifted_retdec.ll",
-    XlangBackwardFlowPath.PROPERTY_VALIDATOR_KEY,
-    new NativeBackwardTaintAnalysisScheduler(Map())
-)

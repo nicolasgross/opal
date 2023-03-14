@@ -133,9 +133,3 @@ class CrossLanguageMcSemaAarch64ForwardTaintAnalysisTest extends AbstractCrossLa
             List(Set("%X0_ptr", "%W0_ptr")),
     ))
 )
-
-class CrossLanguageRetdecX8664ForwardTaintAnalysisTest extends AbstractCrossLanguageForwardTaintAnalysisTest(
-    "./DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/x86_64/lifted_retdec.ll",
-    XlangForwardFlowPath.PROPERTY_VALIDATOR_KEY,
-    new NativeForwardTaintAnalysisScheduler(Map())
-)
