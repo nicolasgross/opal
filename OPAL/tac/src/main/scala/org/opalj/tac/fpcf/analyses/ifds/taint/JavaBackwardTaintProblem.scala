@@ -82,17 +82,19 @@ abstract class JavaBackwardTaintProblem(project: SomeProject)
         // taint expression of return value in callee if return value in caller is tainted
         val callObject = JavaIFDSProblem.asCall(call.stmt)
         val flow = collection.mutable.Set.empty[TaintFact]
-        if (call.stmt.astID == Assignment.ASTID && start.stmt.astID == ReturnValue.ASTID) {
-            in match {
-                case Variable(index) if index == call.index =>
-                    flow ++= createNewTaints(start.stmt.asReturnValue.expr, start)
-                case ArrayElement(index, taintedElement) if index == call.index =>
-                    flow ++= createNewArrayElementTaints(start.stmt.asReturnValue.expr, taintedElement,
-                        call)
-                case InstanceField(index, declaringClass, name) if index == call.index =>
-                    flow ++= createNewInstanceFieldTaints(start.stmt.asReturnValue.expr, declaringClass,
-                        name, call)
-                case _ => // Nothing to do
+        if (!sanitizesReturnValue(callee)) {
+            if (call.stmt.astID == Assignment.ASTID && start.stmt.astID == ReturnValue.ASTID) {
+                in match {
+                    case Variable(index) if index == call.index =>
+                        flow ++= createNewTaints(start.stmt.asReturnValue.expr, start)
+                    case ArrayElement(index, taintedElement) if index == call.index =>
+                        flow ++= createNewArrayElementTaints(start.stmt.asReturnValue.expr, taintedElement,
+                            call)
+                    case InstanceField(index, declaringClass, name) if index == call.index =>
+                        flow ++= createNewInstanceFieldTaints(start.stmt.asReturnValue.expr, declaringClass,
+                            name, call)
+                    case _ => // Nothing to do
+                }
             }
         }
 
@@ -134,11 +136,8 @@ abstract class JavaBackwardTaintProblem(project: SomeProject)
      * Does not taint anything, if the sanitize method was called.
      */
     override def returnFlow(exit: JavaStatement, in: TaintFact, call: JavaStatement, successor: Option[JavaStatement], unbCallChain: Seq[Callable]): Set[TaintFact] = {
-        val callee = exit.callable
-        if (sanitizesReturnValue(callee)) return Set.empty
-
         val callStatement = JavaIFDSProblem.asCall(call.stmt)
-        val staticCall = callee.isStatic
+        val staticCall = exit.callable.isStatic
         val thisOffset = if (staticCall) 0 else 1
         val formalParameterIndices = (0 until callStatement.descriptor.parametersCount)
             .map(index => JavaIFDSProblem.switchParamAndVariableIndex(index + thisOffset, staticCall))

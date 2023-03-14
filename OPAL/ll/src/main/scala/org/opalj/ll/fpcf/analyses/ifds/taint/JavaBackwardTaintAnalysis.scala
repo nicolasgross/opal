@@ -30,7 +30,8 @@ class SimpleJavaBackwardTaintProblem(p: SomeProject) extends JavaBackwardTaintPr
                 Variable(JavaIFDSProblem.switchParamAndVariableIndex(0, isStaticMethod = true))
             ))
 
-    override protected def sanitizesReturnValue(callee: Method): Boolean = callee.name == "sanitize"
+    override protected def sanitizesReturnValue(callee: Method): Boolean =
+        callee.name == "sanitize" || callee.name == "source"
 
     override protected def sanitizesParameter(call: JavaStatement, in: TaintFact): Boolean = false
 

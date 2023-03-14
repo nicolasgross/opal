@@ -34,7 +34,8 @@ class SimpleNativeBackwardTaintProblem(ptrAliasDefs: Map[String, List[Set[String
      * The sanitize method is a sanitizer.
      */
     override protected def sanitizesReturnValue(callee: NativeFunction): Boolean =
-        callee.name == "sanitize" || McSemaUtil.matchesMcSemaFunctionName(callee.name, "sanitize")
+        callee.name == "sanitize" || McSemaUtil.matchesMcSemaFunctionName(callee.name, "sanitize") ||
+            callee.name == "source" || McSemaUtil.matchesMcSemaFunctionName(callee.name, "source")
 
     /**
      * We do not sanitize parameters.
