@@ -99,17 +99,14 @@ abstract class IFDSProblem[Fact <: AbstractIFDSFact, C <: AnyRef, S <: Statement
      * Computes the data flow for a call to return edge.
      *
      * @param call The statement, which invoked the call.
-     * @param in   The facts, which hold before the `call`.
+     * @param callee The function that is called.
+     * @param in The facts, which hold before the `call`.
+     * @param successor The statement after the call within the caller.
      * @param unbCallChain The current call chain of unbalanced returns.
      * @return The facts, which hold after the call independently of what happens in the callee
      *         under the assumption that `in` held before `call`.
      */
-    def callToReturnFlow(
-        call:         S,
-        in:           Fact,
-        successor:    Option[S],
-        unbCallChain: Seq[Callable]
-    ): Set[Fact]
+    def callToReturnFlow(call: S, callee: Option[C], in: Fact, successor: Option[S], unbCallChain: Seq[Callable]): Set[Fact]
 
     /**
      * Called, when new FlowFacts are found at the analysis exit of a method.

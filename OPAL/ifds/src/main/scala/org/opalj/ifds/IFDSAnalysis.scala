@@ -354,21 +354,38 @@ class IFDSAnalysis[Fact <: AbstractIFDSFact, C <: AnyRef, S <: Statement[_ <: C,
                         }
                     }
             }
-        }
-        if (successors.isEmpty) {
-            for {
-                out <- callToReturnFlow(call, in, None, existingCallChain) // ifds line 17 (without summary edge propagation)
-            } {
-                propagate(None, out, call) // ifds line 18
+            if (successors.isEmpty) {
+                for {
+                    out <- callToReturnFlow(call, Some(callee), in, None, existingCallChain) // ifds line 17 (without summary edge propagation)
+                } {
+                    propagate(None, out, call) // ifds line 18
+                }
+            } else {
+                for {
+                    successor <- successors
+                    out <- callToReturnFlow(call, Some(callee), in, Some(successor), existingCallChain) // ifds line 17 (without summary edge propagation)
+                } {
+                    propagate(Some(successor), out, call) // ifds line 18
+                }
             }
-        } else {
-            for {
-                successor <- successors
-                out <- callToReturnFlow(call, in, Some(successor), existingCallChain) // ifds line 17 (without summary edge propagation)
-            } {
-                propagate(Some(successor), out, call) // ifds line 18
+        }
+        if (callees.isEmpty) {
+            if (successors.isEmpty) {
+                for {
+                    out <- callToReturnFlow(call, None, in, None, existingCallChain) // ifds line 17 (without summary edge propagation)
+                } {
+                    propagate(None, out, call) // ifds line 18
+                }
+            } else {
+                for {
+                    successor <- successors
+                    out <- callToReturnFlow(call, None, in, Some(successor), existingCallChain) // ifds line 17 (without summary edge propagation)
+                } {
+                    propagate(Some(successor), out, call) // ifds line 18
+                }
             }
         }
+
     }
 
     private def concreteCallFlow(call: S, callee: C, in: Fact, successor: Option[S])(implicit state: State, work: Work): Set[Fact] = {
@@ -535,9 +552,9 @@ class IFDSAnalysis[Fact <: AbstractIFDSFact, C <: AnyRef, S <: Statement[_ <: C,
      * @param in d2
      * @return
      */
-    private def callToReturnFlow(call: S, in: Fact, successor: Option[S], unbCallChain: Seq[Callable]): Set[Fact] = {
+    private def callToReturnFlow(call: S, callee: Option[C], in: Fact, successor: Option[S], unbCallChain: Seq[Callable]): Set[Fact] = {
         statistics.callToReturnFlow += 1
-        addNullFactIfConfigured(in, ifdsProblem.callToReturnFlow(call, in, successor, unbCallChain))
+        addNullFactIfConfigured(in, ifdsProblem.callToReturnFlow(call, callee, in, successor, unbCallChain))
     }
 
     private def addNullFactIfConfigured(in: Fact, out: Set[Fact]): Set[Fact] = {

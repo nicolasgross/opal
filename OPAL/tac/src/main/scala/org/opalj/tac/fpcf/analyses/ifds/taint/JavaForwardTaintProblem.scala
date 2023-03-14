@@ -198,8 +198,7 @@ abstract class JavaForwardTaintProblem(project: SomeProject)
     /**
      * Removes taints according to `sanitizesParameter`.
      */
-    override def callToReturnFlow(call: JavaStatement, in: TaintFact, successor: Option[JavaStatement],
-                                  unbCallChain: Seq[Callable]): Set[TaintFact] =
+    override def callToReturnFlow(call: JavaStatement, callee: Option[Method], in: TaintFact, successor: Option[JavaStatement], unbCallChain: Seq[Callable]): Set[TaintFact] =
         if (sanitizesParameter(call, in)) Set() else Set(in)
 
     /**

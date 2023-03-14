@@ -134,7 +134,6 @@ abstract class NativeForwardTaintProblem(project: SomeProject)
     override def returnFlow(exit: LLVMStatement, in: NativeTaintFact, call: LLVMStatement, successor: Option[LLVMStatement],
                             unbCallChain: Seq[Callable]): Set[NativeTaintFact] = {
         val callee = exit.callable
-        if (sanitizesReturnValue(callee)) return Set()
         val callInstr = call.instruction.asInstanceOf[Call]
 
         var flows: Set[NativeTaintFact] = in match {
@@ -149,6 +148,9 @@ abstract class NativeForwardTaintProblem(project: SomeProject)
             }
             case NativeArrayElement(base, indices) => base match {
                 case Argument(_, index) => base.typ match {
+                    // dont propagate mcsema state return register if callee is sanitizer
+                    case PointerType(_) if sanitizesReturnValue(callee) && index == 0 &&
+                        indices == McSemaUtil.getReturnRegIndices(exit.function.function.module.targetTriple) => Set()
                     case PointerType(_) => Set(NativeArrayElement(callInstr.argument(index).get, indices)) ++
                         getPtrAliases(callInstr.argument(index).get, call.function).map(NativeArrayElement(_, indices)).asInstanceOf[Set[NativeTaintFact]]
                     case _ => Set()
@@ -164,18 +166,20 @@ abstract class NativeForwardTaintProblem(project: SomeProject)
         }
 
         // taint return value in caller if tainted in callee
-        exit.instruction match {
-            case ret: Ret if ret.value.isDefined => in match {
-                case NativeVariable(value) if ret.value.contains(value) =>
-                    flows += NativeVariable(call.instruction)
-                    flows ++= getPtrAliases(call.instruction, call.function).map(NativeVariable)
-                case NativeArrayElement(base, indices) if ret.value.contains(base) =>
-                    flows += NativeArrayElement(call.instruction, indices)
-                    flows ++= getPtrAliases(call.instruction, call.function).map(NativeArrayElement(_, indices))
-                case NativeTaintNullFact => flows ++= createTaints(callee, call)
-                case _                   =>
+        if (!sanitizesReturnValue(callee)) {
+            exit.instruction match {
+                case ret: Ret if ret.value.isDefined => in match {
+                    case NativeVariable(value) if ret.value.contains(value) =>
+                        flows += NativeVariable(call.instruction)
+                        flows ++= getPtrAliases(call.instruction, call.function).map(NativeVariable)
+                    case NativeArrayElement(base, indices) if ret.value.contains(base) =>
+                        flows += NativeArrayElement(call.instruction, indices)
+                        flows ++= getPtrAliases(call.instruction, call.function).map(NativeArrayElement(_, indices))
+                    case NativeTaintNullFact => flows ++= createTaints(callee, call)
+                    case _                   =>
+                }
+                case _ =>
             }
-            case _ =>
         }
 
         flows ++ flows.filter(_.isInstanceOf[NativeArrayElement])
@@ -191,10 +195,10 @@ abstract class NativeForwardTaintProblem(project: SomeProject)
      * @return The facts, which hold after the call independently of what happens in the callee
      *         under the assumption that `in` held before `call`.
      */
-    override def callToReturnFlow(call: LLVMStatement, in: NativeTaintFact, successor: Option[LLVMStatement],
-                                  unbCallChain: Seq[Callable]): Set[NativeTaintFact] = {
+    override def callToReturnFlow(call: LLVMStatement, callee: Option[NativeFunction], in: NativeTaintFact,
+                                  successor: Option[LLVMStatement], unbCallChain: Seq[Callable]): Set[NativeTaintFact] = {
         val callInstr = call.instruction.asInstanceOf[Call]
-        val isXlangCall = icfg.getCalleesIfCallStatement(call).get.exists(_.isInstanceOf[JNIMethod])
+        val isXlangCall = callee.isDefined && callee.get.isInstanceOf[JNIMethod]
 
         // tainted pointer values passed to callee are not propagated via callToReturn flow
         // instead, they are propagated via call flow and return flow because they might not be valid anymore after the call
@@ -208,14 +212,14 @@ abstract class NativeForwardTaintProblem(project: SomeProject)
             }
             case NativeArrayElement(base, _) => indexOfAliasedArg(base, callInstr, call.function) match {
                 case Some(_) => Set.empty // array elem base is always a pointer
-                case None    => Set(in)
+                case _       => Set(in)
             }
-            // do not propagate global variables except if it is a xlang call
+            // do not propagate global variables except if the callee is not within the analysis or it is a xlang call
             case _: NativeGlobalVariable =>
-                if (isXlangCall) Set(in)
+                if (callee.isEmpty || isXlangCall) Set(in)
                 else Set.empty
             case _: NativeGlobalArrayElement =>
-                if (isXlangCall) Set(in)
+                if (callee.isEmpty || isXlangCall) Set(in)
                 else Set.empty
             case _ => Set(in)
         }
@@ -282,7 +286,6 @@ abstract class NativeForwardTaintProblem(project: SomeProject)
         successor:    Option[LLVMStatement]
     ): Set[NativeTaintFact] = {
         val callee = exit.callable
-        if (sanitizesReturnValue(JNIMethod(callee))) return Set.empty
         var flows: Set[NativeTaintFact] = Set.empty
         in match {
             case StaticField(classType, fieldName) => flows += JavaStaticField(classType, fieldName)
@@ -294,12 +297,14 @@ abstract class NativeForwardTaintProblem(project: SomeProject)
         }
 
         // Propagate taints of the return value
-        if (exit.stmt.astID == ReturnValue.ASTID) {
-            val returnValueDefinedBy = exit.stmt.asReturnValue.expr.asVar.definedBy
-            in match {
-                case Variable(index) if returnValueDefinedBy.contains(index) =>
-                    flows += NativeVariable(call.instruction)
-                case _ => // Nothing to do
+        if (!sanitizesReturnValue(JNIMethod(callee))) {
+            if (exit.stmt.astID == ReturnValue.ASTID) {
+                val returnValueDefinedBy = exit.stmt.asReturnValue.expr.asVar.definedBy
+                in match {
+                    case Variable(index) if returnValueDefinedBy.contains(index) =>
+                        flows += NativeVariable(call.instruction)
+                    case _ => // Nothing to do
+                }
             }
         }
         flows

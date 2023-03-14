@@ -173,8 +173,7 @@ abstract class JavaBackwardTaintProblem(project: SomeProject)
      * Removes taints according to `sanitizeParamters`.
      * Does not propagate facts of pass-by-reference params.
      */
-    override def callToReturnFlow(call: JavaStatement, in: TaintFact, successor: Option[JavaStatement],
-                                  unbCallChain: Seq[Callable]): Set[TaintFact] = {
+    override def callToReturnFlow(call: JavaStatement, callee: Option[Method], in: TaintFact, successor: Option[JavaStatement], unbCallChain: Seq[Callable]): Set[TaintFact] = {
         val result = collection.mutable.Set.empty[TaintFact]
 
         // do not propagate tainted pass-by-reference parameters and static fields, they are propagated via call flow and return flow

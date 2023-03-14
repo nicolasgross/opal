@@ -5,7 +5,7 @@ import org.opalj.br.Method
 import org.opalj.br.analyses.SomeProject
 import org.opalj.ifds.Dependees.Getter
 import org.opalj.ifds.{Callable, IFDSFact}
-import org.opalj.ll.fpcf.analyses.ifds.{JNICallUtil, JNIMethod, LLVMFunction, LLVMStatement, NativeBackwardIFDSProblem, NativeFunction}
+import org.opalj.ll.fpcf.analyses.ifds.{JNICallUtil, JNIMethod, LLVMFunction, LLVMStatement, McSemaUtil, NativeBackwardIFDSProblem, NativeFunction}
 import org.opalj.ll.llvm.PointerType
 import org.opalj.ll.llvm.value._
 import org.opalj.tac.fpcf.analyses.ifds.JavaIFDSProblem.V
@@ -155,19 +155,21 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
         callee match {
             case LLVMFunction(callee) =>
                 // taint return value in callee, if tainted in caller
-                start.instruction match {
-                    case ret: Ret if ret.value.isDefined => in match {
-                        case NativeVariable(value) if value == call.instruction => ret.value.get match {
-                            case variable: GlobalVariable => flows += NativeGlobalVariable(variable)
-                            case _                        => flows += NativeVariable(ret.value.get)
-                        }
-                        case NativeArrayElement(base, indices) if base == call.instruction => ret.value.get match {
-                            case variable: GlobalVariable => flows += NativeGlobalArrayElement(variable, indices)
-                            case _                        => flows += NativeArrayElement(ret.value.get, indices)
+                if (!sanitizesReturnValue(start.callable)) {
+                    start.instruction match {
+                        case ret: Ret if ret.value.isDefined => in match {
+                            case NativeVariable(value) if value == call.instruction => ret.value.get match {
+                                case variable: GlobalVariable => flows += NativeGlobalVariable(variable)
+                                case _                        => flows += NativeVariable(ret.value.get)
+                            }
+                            case NativeArrayElement(base, indices) if base == call.instruction => ret.value.get match {
+                                case variable: GlobalVariable => flows += NativeGlobalArrayElement(variable, indices)
+                                case _                        => flows += NativeArrayElement(ret.value.get, indices)
+                            }
+                            case _ =>
                         }
                         case _ =>
                     }
-                    case _ =>
                 }
 
                 // TODO handle `byval` attribute or not? nested objects?
@@ -189,6 +191,9 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
                     // check for tainted pass-by-reference parameters (pointer)
                     case NativeArrayElement(base, indices) => indexOfAliasedArg(base, callInstr, call.function) match {
                         case Some(index) => callInstr.argument(index).get.typ match {
+                            // dont propagate mcsema state return register if callee is sanitizer
+                            case PointerType(_) if sanitizesReturnValue(start.callable) && index == 0 &&
+                                indices == McSemaUtil.getReturnRegIndices(start.callable.function.module.targetTriple) =>
                             case PointerType(_) => flows += NativeArrayElement(callee.argument(index), indices)
                             case _              =>
                         }
@@ -212,7 +217,6 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
     override def returnFlow(exit: LLVMStatement, in: NativeTaintFact, call: LLVMStatement,
                             successor: Option[LLVMStatement], unbCallChain: Seq[Callable]): Set[NativeTaintFact] = {
         val callee = exit.callable;
-        if (sanitizesReturnValue(callee)) return Set.empty
 
         val callInstr = call.instruction.asInstanceOf[Call]
         // taint parameters in caller context if they were tainted in the callee context
@@ -253,14 +257,12 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
     protected def createFlowFactAtCall(call: LLVMStatement, in: NativeTaintFact,
                                        unbCallChain: Seq[Callable]): Option[NativeTaintFact] = None
 
-    override def callToReturnFlow(call: LLVMStatement, in: NativeTaintFact, successor: Option[LLVMStatement],
-                                  unbCallChain: Seq[Callable]): Set[NativeTaintFact] = {
+    override def callToReturnFlow(call: LLVMStatement, callee: Option[NativeFunction], in: NativeTaintFact, successor: Option[LLVMStatement], unbCallChain: Seq[Callable]): Set[NativeTaintFact] = {
         val callInstr = call.instruction.asInstanceOf[Call]
-        val isXlangCall = icfg.getCalleesIfCallStatement(call).get.exists(_.isInstanceOf[JNIMethod])
+        val isXlangCall = callee.isDefined && callee.get.isInstanceOf[JNIMethod]
 
         // tainted pointer values passed to callee are not propagated via callToReturn flow
         // instead, they are propagated via call flow and return flow because they might not be valid anymore after the call
-        // global variables are only propagated on xlang calls
         val propagatedIn: Set[NativeTaintFact] = in match {
             case NativeVariable(value) => indexOfAliasedArg(value, callInstr, call.function) match {
                 case Some(index) => callInstr.argument(index).get.typ match {
@@ -271,14 +273,14 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
             }
             case NativeArrayElement(base, _) => indexOfAliasedArg(base, callInstr, call.function) match {
                 case Some(_) => Set.empty // array elem base is always a pointer
-                case None    => Set(in)
+                case _       => Set(in)
             }
-            // do not propagate global variables except if it is a xlang call
+            // do not propagate global variables except if the callee is not within the analysis or it is a xlang call
             case _: NativeGlobalVariable =>
-                if (isXlangCall) Set(in)
+                if (callee.isEmpty || isXlangCall) Set(in)
                 else Set.empty
             case _: NativeGlobalArrayElement =>
-                if (isXlangCall) Set(in)
+                if (callee.isEmpty || isXlangCall) Set(in)
                 else Set.empty
             case _ => Set(in)
         }
@@ -324,7 +326,6 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
     }
 
     private def javaUnbalancedReturnFlow(callee: LLVMFunction, javaCallee: Method, call: JavaStatement, in: NativeTaintFact): Set[TaintFact] = {
-        if (sanitizesReturnValue(callee)) return Set.empty
         val callStatement = JavaIFDSProblem.asCall(call.stmt)
 
         def taintActualIfFormal(in: Value): Set[TaintFact] = {
@@ -401,10 +402,12 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
         }
 
         // taint return value in callee, if tainted in caller
-        if (start.stmt.astID == ReturnValue.ASTID) in match {
-            case NativeVariable(value) if value == callInstr      => flow ++= createNewTaints(start.stmt.asReturnValue.expr, start)
-            case NativeArrayElement(base, _) if base == callInstr => flow ++= createNewTaints(start.stmt.asReturnValue.expr, start)
-            case _                                                =>
+        if (!sanitizesReturnValue(JNIMethod(callee))) {
+            if (start.stmt.astID == ReturnValue.ASTID) in match {
+                case NativeVariable(value) if value == callInstr      => flow ++= createNewTaints(start.stmt.asReturnValue.expr, start)
+                case NativeArrayElement(base, _) if base == callInstr => flow ++= createNewTaints(start.stmt.asReturnValue.expr, start)
+                case _                                                =>
+            }
         }
 
         def taintRefParam(callInstr: Call, in: Value): Set[TaintFact] = callInstr.indexOfArgument(in) match {
@@ -431,7 +434,6 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
     override protected def javaReturnFlow(exit: JavaStatement, in: TaintFact, call: LLVMStatement, callFact: NativeTaintFact,
                                           unbCallChain: Seq[Callable], successor: Option[LLVMStatement]): Set[NativeTaintFact] = {
         val callee = exit.callable
-        if (sanitizesReturnValue(JNIMethod(callee))) return Set.empty
         val callInstr = call.instruction.asInstanceOf[Call]
 
         def taintActualIfFormal(index: Int): Set[NativeTaintFact] = {

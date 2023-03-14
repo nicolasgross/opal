@@ -155,12 +155,7 @@ class VariableTypeProblem(project: SomeProject, override val subsumeFacts: Boole
      * If the call is an instance call, new CalleeTypes will be created for the call, one for each
      * VariableType, which could be the call's target.
      */
-    override def callToReturnFlow(
-        call:         JavaStatement,
-        in:           VTAFact,
-        successor:    Option[JavaStatement],
-        unbCallChain: Seq[Callable]
-    ): Set[VTAFact] = {
+    override def callToReturnFlow(call: JavaStatement, callee: Option[Method], in: VTAFact, successor: Option[JavaStatement], unbCallChain: Seq[Callable]): Set[VTAFact] = {
         val inSet = Set(in)
         // Check, to which variables the callee may refer
         val calleeDefinitionSites = JavaIFDSProblem.asCall(call.stmt).receiverOption

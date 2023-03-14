@@ -70,7 +70,7 @@ class SimpleNativeBackwardTaintProblem(ptrAliasDefs: Map[String, List[Set[String
 }
 
 class SimpleNativeBackwardTaintAnalysis(ptrAliasDefs: Map[String, List[Set[String]]], project: SomeProject)
-    extends NativeIFDSAnalysis(project, new SimpleNativeBackwardTaintProblem(Map(), project), NativeTaint)
+    extends NativeIFDSAnalysis(project, new SimpleNativeBackwardTaintProblem(ptrAliasDefs, project), NativeTaint)
 
 class NativeBackwardTaintAnalysisScheduler(ptrAliasDefs: Map[String, List[Set[String]]]) extends NativeIFDSAnalysisScheduler[NativeTaintFact] {
     override def init(p: SomeProject, ps: PropertyStore) = new SimpleNativeBackwardTaintAnalysis(ptrAliasDefs, p)

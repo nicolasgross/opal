@@ -117,12 +117,11 @@ abstract class NativeIFDSProblem[Fact <: AbstractIFDSFact, JavaFact <: AbstractI
      * All variables in the caller must be tainted that are a GetElementPtr with same base and indices.
      */
     protected def getPtrAliasesForArrElem(fact: NativeArrayElement, function: LLVMFunction): Set[Value] = {
-        val gep = function.function.basicBlocks.flatMap(_.instructions).find {
-            case gep: GetElementPtr if gep.base == fact.base && gep.isConstant && gep.constants == fact.indices => true
-            case _ => false
-        }
-        if (gep.isDefined) getPtrAliases(gep.get, function) + gep.get
-        else Set.empty
+        val geps = function.function.basicBlocks.flatMap(_.instructions).filter {
+            case gep: GetElementPtr => gep.base == fact.base && gep.isConstant && gep.constants == fact.indices
+            case _                  => false
+        }.toSet
+        geps.flatMap(gep => getPtrAliases(gep, function)) ++ geps
     }
 
     /**

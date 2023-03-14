@@ -179,7 +179,6 @@ class SimpleJavaForwardTaintProblem(p: SomeProject) extends JavaForwardTaintProb
         nativeCallee: Method,
         successor:    Option[JavaStatement]
     ): Set[TaintFact] = {
-        if (sanitizesReturnValue(nativeCallee)) return Set.empty
         val callStatement = JavaIFDSProblem.asCall(call.stmt)
         val allParams = callStatement.allParams
         var flows: Set[TaintFact] = Set.empty
@@ -216,23 +215,25 @@ class SimpleJavaForwardTaintProblem(p: SomeProject) extends JavaForwardTaintProb
         }
 
         // Propagate taints of the return value
-        exit.instruction match {
-            case ret: Ret => {
-                in match {
-                    case NativeVariable(value) if ret.value.contains(value) && call.stmt.astID == Assignment.ASTID =>
-                        flows += Variable(call.index)
-                    // TODO
-                    /*case ArrayElement(index, taintedIndex) if returnValueDefinedBy.contains(index) =>
+        if (!sanitizesReturnValue(nativeCallee)) {
+            exit.instruction match {
+                case ret: Ret => {
+                    in match {
+                        case NativeVariable(value) if ret.value.contains(value) && call.stmt.astID == Assignment.ASTID =>
+                            flows += Variable(call.index)
+                        // TODO
+                        /*case ArrayElement(index, taintedIndex) if returnValueDefinedBy.contains(index) =>
             flows += ArrayElement(call.index, taintedIndex)
           case InstanceField(index, declClass, taintedField) if returnValueDefinedBy.contains(index) =>
             flows += InstanceField(call.index, declClass, taintedField)*/
-                    case NativeTaintNullFact =>
-                        val taints = createTaints(nativeCallee, call)
-                        if (taints.nonEmpty) flows ++= taints
-                    case _ => // Nothing to do
+                        case NativeTaintNullFact =>
+                            val taints = createTaints(nativeCallee, call)
+                            if (taints.nonEmpty) flows ++= taints
+                        case _ => // Nothing to do
+                    }
                 }
+                case _ =>
             }
-            case _ =>
         }
         flows
     }

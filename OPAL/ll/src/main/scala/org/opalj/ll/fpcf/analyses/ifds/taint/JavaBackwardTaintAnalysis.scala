@@ -127,7 +127,6 @@ class SimpleJavaBackwardTaintProblem(p: SomeProject) extends JavaBackwardTaintPr
     }
 
     private def nativeUnbalancedReturnFlow(callee: Method, call: LLVMStatement, in: TaintFact): Set[NativeTaintFact] = {
-        if (sanitizesReturnValue(callee)) return Set.empty
         val callInstr = call.instruction.asInstanceOf[Call]
 
         // JNI call args if static: JNIEnv, class, method, arg 0, arg 1, ...
@@ -158,14 +157,16 @@ class SimpleJavaBackwardTaintProblem(p: SomeProject) extends JavaBackwardTaintPr
         val flow = collection.mutable.Set.empty[NativeTaintFact]
 
         // taint return value in callee, if tainted in caller
-        start.instruction match {
-            case ret: Ret if ret.value.isDefined => in match {
-                case Variable(index) if index == call.index            => flow += NativeVariable(ret.value.get)
-                case ArrayElement(index, _) if index == call.index     => flow += NativeVariable(ret.value.get)
-                case InstanceField(index, _, _) if index == call.index => flow += NativeVariable(ret.value.get)
-                case _                                                 =>
+        if (!sanitizesReturnValue(javaCallee)) {
+            start.instruction match {
+                case ret: Ret if ret.value.isDefined => in match {
+                    case Variable(index) if index == call.index            => flow += NativeVariable(ret.value.get)
+                    case ArrayElement(index, _) if index == call.index     => flow += NativeVariable(ret.value.get)
+                    case InstanceField(index, _, _) if index == call.index => flow += NativeVariable(ret.value.get)
+                    case _                                                 =>
+                }
+                case _ =>
             }
-            case _ =>
         }
 
         // check for tainted 'this' and pass-by-reference parameters
@@ -199,7 +200,6 @@ class SimpleJavaBackwardTaintProblem(p: SomeProject) extends JavaBackwardTaintPr
 
     private def nativeReturnFlow(in: NativeTaintFact, call: JavaStatement, callee: LLVMFunction,
                                  javaNativeCallee: Method, unbCallChain: Seq[Callable]): Set[TaintFact] = {
-        if (sanitizesReturnValue(javaNativeCallee)) return Set.empty
         val callStatement = JavaIFDSProblem.asCall(call.stmt)
 
         def taintActualIfFormal(in: Value): Set[TaintFact] = {
