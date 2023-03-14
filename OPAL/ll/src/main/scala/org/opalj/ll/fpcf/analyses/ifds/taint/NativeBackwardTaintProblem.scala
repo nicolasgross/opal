@@ -177,6 +177,9 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
                     // check for tainted pass-by-reference parameters (pointer)
                     case NativeVariable(value) => value match {
                         case gep: GetElementPtr if gep.isConstant => indexOfAliasedArg(gep.base, callInstr, call.function) match {
+                            // dont propagate mcsema state return register if callee is sanitizer
+                            case Some(index) if sanitizesReturnValue(start.callable) && index == 0 &&
+                                gep.constants == McSemaUtil.getReturnRegIndices(start.callable.function.module.targetTriple) =>
                             case Some(index) => flows += NativeArrayElement(callee.argument(index), gep.constants)
                             case None        =>
                         }
