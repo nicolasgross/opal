@@ -50,6 +50,9 @@ class SimpleNativeBackwardTaintProblem(ptrAliasDefs: Map[String, List[Set[String
             // create flow fact if source is reached with tainted value
             case NativeVariable(value) if (value == call.instruction || McSemaUtil.mcSemaRetvalTainted(call, in)(p)) &&
                 !unbCallChain.contains(call.callable) => Some(NativeFlowFact(unbCallChain.prepended(call.callable)))
+            case NativeArrayElement(base, indices) if McSemaUtil.isMcSemaStateType(base.typ) &&
+                indices == McSemaUtil.getReturnRegIndices(call.function.function.module.targetTriple) &&
+                !unbCallChain.contains(call.callable) => Some(NativeFlowFact(unbCallChain.prepended(call.callable)))
             case _ => None
         }
         else None
