@@ -48,10 +48,10 @@ abstract class NativeForwardTaintProblem(project: SomeProject)
                 case NativeVariable(value) if value == store.dst || getPtrAliases(value, statement.function).contains(store.dst)       => Set()
                 case NativeGlobalVariable(value) if value == store.dst || getPtrAliases(value, statement.function).contains(store.dst) => Set()
                 case NativeVariable(value) if value == store.src => store.dst match {
-                    case gep: GetElementPtr if gep.isConstant => Set(in, NativeArrayElement(gep.base, gep.constants)) ++
+                    case gep: GetElementPtr if gep.isConstant => Set(in, NativeVariable(gep), NativeArrayElement(gep.base, gep.constants)) ++
                         getPtrAliases(gep.base, statement.function).map(NativeArrayElement(_, gep.constants)) ++
                         getPtrAliases(gep, statement.function).map(NativeVariable)
-                    case gep: GetElementPtr if !gep.isConstant => Set(in, NativeVariable(gep.base)) ++
+                    case gep: GetElementPtr if !gep.isConstant => Set(in, NativeVariable(gep), NativeVariable(gep.base)) ++
                         getPtrAliases(gep.base, statement.function).map(NativeVariable) ++
                         getPtrAliases(gep, statement.function).map(NativeVariable)
                     case _ => Set(in, NativeVariable(store.dst)) ++

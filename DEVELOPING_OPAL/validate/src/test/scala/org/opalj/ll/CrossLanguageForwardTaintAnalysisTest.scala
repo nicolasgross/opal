@@ -119,17 +119,17 @@ class CrossLanguageForwardTaintAnalysisMcSemaX8664GccO2Test extends AbstractCros
     ))
 )
 
-class CrossLanguageMcSemaAarch64ForwardTaintAnalysisTest extends AbstractCrossLanguageForwardTaintAnalysisTest(
-    "./DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/aarch64/lifted_mcsema.ll",
+class CrossLanguageForwardTaintAnalysisMcSemaAarch64ClangO0Test extends AbstractCrossLanguageForwardTaintAnalysisTest(
+    "./DEVELOPING_OPAL/validate/src/test/resources/llvm/cross_language/taint/aarch64/libtainttest_clang_O0_mcsema.ll",
     XlangForwardFlowPathMcSemaAarch64ClangO0.PROPERTY_VALIDATOR_KEY,
     new NativeForwardTaintAnalysisScheduler(Map(
-        "sub_1ff00e3c_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1identity_1to_1sink" ->
+        "sub_1ff00fdc_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1identity_1to_1sink" ->
             List(Set("%X0_ptr", "%W0_ptr")),
-        "sub_1ff00df4_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_sanitize_1only_1a_1into_1sink" ->
+        "sub_1ff00f94_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_sanitize_1only_1a_1into_1sink" ->
             List(Set("%10", "%16", "%25")),
-        "sub_1ff00ed4_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_native_1array_1tainted" ->
+        "sub_1ff01074_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_native_1array_1tainted" ->
             List(Set("%X0_ptr", "%W0_ptr")),
-        "sub_1ff00d2c_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1source" ->
-            List(Set("%X0_ptr", "%W0_ptr")),
+        "sub_1ff00eac_Java_org_opalj_fpcf_fixtures_taint_1xlang_TaintTest_propagate_1source" ->
+            List(Set("%X0_ptr", "%W0_ptr"))
     ))
 )

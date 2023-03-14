@@ -1,6 +1,3 @@
-Retdec v5.0:
-$ retdec-decompiler -o lifted_retdec.c libtainttest.so
-
 McSema commit 26368053f761be05dab708bc28fb97090c64b2be:
 $ /root/ida/idat64 -B -S"/opt/trailofbits/lib/python3/site-packages/mcsema_disass-3.1.3.8-py3.8.egg/mcsema_disass/ida7/get_cfg.py --arch amd64 --os linux --pie-mode --rebase 535822336 --output /mcsema/local/libtainttest_gcc_O0_mcsema.cfg" /mcsema/local/libtainttest_gcc_O0.so
 $ mcsema-lift-11.0 --os linux --arch amd64 --explicit_args --merge_segments --local_state_pointer --name_register_variables --cfg /mcsema/local/libtainttest_gcc_O0_mcsema.cfg --output /mcsema/local/libtainttest_gcc_O0_mcsema.bc
