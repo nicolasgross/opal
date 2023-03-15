@@ -76,7 +76,7 @@ case class Schedule[A](
                 if (trace)
                     info(
                         "analysis progress",
-                        s"analysis phase $id took ${t.toSeconds}"
+                        s"analysis phase $id of ${css.map(_.name).mkString("(", ", ", ")")} took ${t.toSeconds}"
                     )
             }
         }
