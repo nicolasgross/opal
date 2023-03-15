@@ -170,7 +170,7 @@ abstract class JavaBackwardTaintProblem(project: SomeProject)
     /**
      * Adds a FlowFact, if `createFlowFactAtCall` creates one.
      * Removes taints according to `sanitizeParamters`.
-     * Does not propagate facts of pass-by-reference params.
+     * Does not propagate facts of pass-by-reference params or static fields, except callee is None.
      */
     override def callToReturnFlow(call: JavaStatement, callee: Option[Method], in: TaintFact, successor: Option[JavaStatement], unbCallChain: Seq[Callable]): Set[TaintFact] = {
         val result = collection.mutable.Set.empty[TaintFact]
@@ -181,8 +181,8 @@ abstract class JavaBackwardTaintProblem(project: SomeProject)
         if (!sanitizesParameter(call, in)) {
             if (callObject.allParams.isEmpty ||
                 (isStatic && !callObject.descriptor.parameterTypes.exists(_.isReferenceType))) in match {
-                case _: StaticField =>
-                case _              => result += in
+                case _: StaticField if callee.isDefined =>
+                case _                                  => result += in
             }
             else {
                 val thisOffset = if (isStatic) 0 else 1
@@ -192,10 +192,10 @@ abstract class JavaBackwardTaintProblem(project: SomeProject)
                     .foreach { pair =>
                         val param = pair._1.asVar
                         in match {
-                            case Variable(index) if param.definedBy.contains(index) =>
-                            case ArrayElement(index, taintedElement) if param.definedBy.contains(index) =>
-                            case InstanceField(index, declaringClass, name) if param.definedBy.contains(index) =>
-                            case _: StaticField =>
+                            case Variable(index) if param.definedBy.contains(index) && callee.isDefined =>
+                            case ArrayElement(index, _) if param.definedBy.contains(index) && callee.isDefined =>
+                            case InstanceField(index, _, _) if param.definedBy.contains(index) && callee.isDefined =>
+                            case _: StaticField if callee.isDefined =>
                             case _ => result += in
                         }
                     }
