@@ -224,7 +224,7 @@ object ApkParser {
     var logOutput = false
 
     /**
-     * Creates a new [[Project]] from an APK file.
+     * Creates a new [[Project]] from an APK file. Uses RetDec to lift native .so files to LLVM IR.
      *
      * Generation of .jar and .bc files takes some time, please be patient.
      *
@@ -259,6 +259,45 @@ object ApkParser {
             }
             case None =>
         }
+
+        apkParser.cleanUp()
+
+        project
+    }
+
+    /**
+     * Creates a new [[Project]] from an APK file. Expects paths to already lifted (LLVM IR) native libs.
+     *
+     * Generation of .jar files takes some time, please be patient.
+     *
+     * @param apkPath path to the APK file.\
+     * @param liftedNativeLibs paths to lifted (LLVM IR) native lib files.
+     * @param projectConfig config values for the [[Project]].
+     * @param dexParser: used dex file parser, defaults to Enjarify.
+     * @return the newly created [[Project]] containing the APK's contents (dex code, native code and entry points).
+     */
+    def createProject(apkPath: String, liftedNativeLibs: List[String], projectConfig: Config,
+                      dexParser: DexParser = DexParser.Enjarify): Project[URL] = {
+        val apkParser = new ApkParser(apkPath)
+
+        val jarDir = apkParser.parseDexCode(dexParser)._1
+
+        val project =
+            Project(
+                jarDir.toFile,
+                GlobalLogContext,
+                projectConfig
+            )
+
+        project.updateProjectInformationKeyInitializationData(ApkComponentsKey)(
+            _ => apkParser
+        )
+        project.get(ApkComponentsKey)
+
+        project.updateProjectInformationKeyInitializationData(LLVMProjectKey)(
+            _ => liftedNativeLibs
+        )
+        project.get(LLVMProjectKey)
 
         apkParser.cleanUp()
 
