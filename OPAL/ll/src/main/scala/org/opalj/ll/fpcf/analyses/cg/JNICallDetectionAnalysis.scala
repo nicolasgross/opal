@@ -34,14 +34,14 @@ object JNICallDetectionAnalysis {
             case Some(Symbol("CallTypeMethod")) =>
                 resolveMethodId(call.operand(2), false) match { // methodID is the third parameter
                     case None =>
-                        OPALLogger.warn(LogCategory, s"called method in JNI call could not be resolved: $call in ${call.function}")
+                        OPALLogger.warn(LogCategory, s"native call might be JNI call but method could not be resolved: $call in ${call.function}")
                         None
                     case methods => methods
                 }
             case Some(Symbol("CallStaticTypeMethod")) =>
                 resolveMethodId(call.operand(2), true) match { // methodID is the third parameter
                     case None =>
-                        OPALLogger.warn(LogCategory, s"called method in JNI call could not be resolved: $call in ${call.function}")
+                        OPALLogger.warn(LogCategory, s"native call might be JNI call but method could not be resolved: $call in ${call.function}")
                         None
                     case methods => methods
                 }
