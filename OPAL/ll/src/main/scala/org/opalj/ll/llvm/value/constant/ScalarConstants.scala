@@ -12,4 +12,6 @@ case class ConstantIntValue(ref: LLVMValueRef) extends User(ref) {
 }
 case class ConstantPointerNullValue(ref: LLVMValueRef) extends User(ref)
 
+case class ConstantFPValue(ref: LLVMValueRef) extends User(ref)
+
 case class UndefValue(ref: LLVMValueRef) extends User(ref)

@@ -389,7 +389,8 @@ lazy val `Framework` = (project in file("OPAL/framework"))
     ba  % "it->it;it->test;test->test;compile->compile",
     av  % "it->it;it->test;test->test;compile->compile",
     tac % "it->it;it->test;test->test;compile->compile",
-    ll  % "it->it;it->test;test->test;compile->compile"
+    ll  % "it->it;it->test;test->test;compile->compile",
+    apk  % "it->it;it->test;test->test;compile->compile"
   )
   .configs(IntegrationTest)
 

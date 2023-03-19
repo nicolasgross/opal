@@ -27,9 +27,21 @@ object McSemaUtil {
         else Seq.empty
     }
 
-    def getFirstArgRegIndices(targetTriple: String): Seq[Long] = {
-        if (targetTriple.startsWith("x86_64")) Seq(0, 6, 11, 0, 0) // indices of RDI in McSema state
-        else if (targetTriple.startsWith("aarch64")) Seq(0, 3, 1, 0, 0) // indices of X0 in McSema state
+    def getArgRegIndices(targetTriple: String, index: Int): Seq[Long] = {
+        if (targetTriple.startsWith("x86_64")) index match {
+            case 0 => Seq(0, 6, 11, 0, 0) // indices of RDI in McSema state
+            case 1 => Seq(0, 6, 9, 0, 0)  // indices of RSI in McSema state
+            case 2 => Seq(0, 6, 7, 0, 0)  // indices of RDX in McSema state
+            case 3 => Seq(0, 6, 5, 0, 0)  // indices of RCX in McSema state
+            case _ => Seq.empty
+        }
+        else if (targetTriple.startsWith("aarch64")) index match {
+            case 0 => Seq(0, 3, 1, 0, 0) // indices of X0 in McSema state
+            case 1 => Seq(0, 3, 3, 0, 0) // indices of X1 in McSema state
+            case 2 => Seq(0, 3, 5, 0, 0) // indices of X2 in McSema state
+            case 3 => Seq(0, 3, 7, 0, 0) // indices of X3 in McSema state
+            case _ => Seq.empty
+        }
         else Seq.empty
     }
 
@@ -77,6 +89,6 @@ object McSemaUtil {
         }
     }
 
-    def matchesMcSemaFunctionName(fnameToCheck: String, fnameSearch: String): Boolean =
-        fnameToCheck.startsWith("sub_") && fnameToCheck.endsWith(s"__$fnameSearch")
+    def matchesMcSemaFunctionName(fnameToCheck: String, matchesWith: String): Boolean =
+        fnameToCheck.startsWith("sub_") && fnameToCheck.endsWith(s"__$matchesWith")
 }

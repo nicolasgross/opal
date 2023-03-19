@@ -50,7 +50,7 @@ class SimpleNativeForwardTaintProblem(ptrAliasDefs: Map[String, List[Set[String]
             }
             else if (McSemaUtil.matchesMcSemaFunctionName(callee.name, "sink")) in match {
                 case NativeArrayElement(base, indices) if base == callInstr.argument(0).get &&
-                    indices == McSemaUtil.getFirstArgRegIndices(call.function.function.module.targetTriple) =>
+                    indices == McSemaUtil.getArgRegIndices(call.function.function.module.targetTriple, 0) =>
                     return Some(NativeFlowFact(Seq(call.callable, callee)))
                 case _ =>
             }

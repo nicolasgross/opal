@@ -68,7 +68,7 @@ class SimpleNativeBackwardTaintProblem(ptrAliasDefs: Map[String, List[Set[String
             Some(NativeVariable(function.argument(0)))
         case LLVMFunction(function) if McSemaUtil.matchesMcSemaFunctionName(function.name, "sink") &&
             McSemaUtil.isMcSemaStateType(function.argument(0).typ) =>
-            Some(NativeArrayElement(function.argument(0), McSemaUtil.getFirstArgRegIndices(function.module.targetTriple)))
+            Some(NativeArrayElement(function.argument(0), McSemaUtil.getArgRegIndices(function.module.targetTriple, 0)))
         case _ => None
     }
 }

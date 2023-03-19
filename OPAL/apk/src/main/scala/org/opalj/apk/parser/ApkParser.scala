@@ -233,17 +233,16 @@ object ApkParser {
      * @param dexParser: used dex file parser, defaults to Enjarify.
      * @return the newly created [[Project]] containing the APK's contents (dex code, native code and entry points).
      */
-    def createProject(apkPath: String, projectConfig: Config, dexParser: DexParser = DexParser.Enjarify): Project[URL] = {
+    def createProject(apkPath: String, projectConfig: Config, dexParser: DexParser): Project[URL] = {
         val apkParser = new ApkParser(apkPath)
 
         val jarDir = apkParser.parseDexCode(dexParser)._1
 
-        val project =
-            Project(
-                jarDir.toFile,
-                GlobalLogContext,
-                projectConfig
-            )
+        val project = Project(
+            jarDir.toFile,
+            GlobalLogContext,
+            projectConfig
+        )
 
         project.updateProjectInformationKeyInitializationData(ApkComponentsKey)(
             _ => apkParser
@@ -271,33 +270,34 @@ object ApkParser {
      * Generation of .jar files takes some time, please be patient.
      *
      * @param apkPath path to the APK file.\
-     * @param liftedNativeLibs paths to lifted (LLVM IR) native lib files.
+     * @param liftedNativeLibs paths to lifted (LLVM IR) native lib files. If empty, no LLVM project is created.
      * @param projectConfig config values for the [[Project]].
      * @param dexParser: used dex file parser, defaults to Enjarify.
      * @return the newly created [[Project]] containing the APK's contents (dex code, native code and entry points).
      */
     def createProject(apkPath: String, liftedNativeLibs: List[String], projectConfig: Config,
-                      dexParser: DexParser = DexParser.Enjarify): Project[URL] = {
+                      dexParser: DexParser): Project[URL] = {
         val apkParser = new ApkParser(apkPath)
 
         val jarDir = apkParser.parseDexCode(dexParser)._1
 
-        val project =
-            Project(
-                jarDir.toFile,
-                GlobalLogContext,
-                projectConfig
-            )
+        val project = Project(
+            jarDir.toFile,
+            GlobalLogContext,
+            projectConfig
+        )
 
         project.updateProjectInformationKeyInitializationData(ApkComponentsKey)(
             _ => apkParser
         )
         project.get(ApkComponentsKey)
 
-        project.updateProjectInformationKeyInitializationData(LLVMProjectKey)(
-            _ => liftedNativeLibs
-        )
-        project.get(LLVMProjectKey)
+        if (liftedNativeLibs.nonEmpty) {
+            project.updateProjectInformationKeyInitializationData(LLVMProjectKey)(
+                _ => liftedNativeLibs
+            )
+            project.get(LLVMProjectKey)
+        }
 
         apkParser.cleanUp()
 

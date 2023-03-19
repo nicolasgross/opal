@@ -75,7 +75,10 @@ class SimpleJavaBackwardTaintProblem(p: SomeProject) extends JavaBackwardTaintPr
             val nativeFunctionName = JNICallUtil.resolveNativeFunctionName(callee)
             val function = llvmProject.function(nativeFunctionName._1) match {
                 case Some(f) => LLVMFunction(f)
-                case None    => LLVMFunction(llvmProject.function(nativeFunctionName._2).get)
+                case None    => LLVMFunction(llvmProject.function(nativeFunctionName._2) match {
+                    case Some(g) => g
+                    case None => return Set.empty
+                })
             }
             var result = Set.empty[TaintFact]
             val entryFacts = nativeICFG.startStatements(function)

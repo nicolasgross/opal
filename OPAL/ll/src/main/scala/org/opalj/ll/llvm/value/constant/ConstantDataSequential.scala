@@ -33,3 +33,5 @@ abstract class ConstantDataSequential(ref: LLVMValueRef) extends User(ref) {
 
 case class ConstantDataArray(ref: LLVMValueRef) extends ConstantDataSequential(ref)
 case class ConstantDataVector(ref: LLVMValueRef) extends ConstantDataSequential(ref)
+case class ConstantAggregateZero(ref: LLVMValueRef) extends ConstantDataSequential(ref)
+

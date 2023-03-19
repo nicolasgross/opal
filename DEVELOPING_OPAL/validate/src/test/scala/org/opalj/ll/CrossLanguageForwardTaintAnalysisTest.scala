@@ -1,12 +1,13 @@
 /* BSD 2-Clause License - see OPAL/LICENSE for details. */
 package org.opalj.ll
 
-import org.opalj.br.analyses.Project
+import org.opalj.br.analyses.{Project, SomeProject}
 import org.opalj.fpcf.PropertiesTest
 import org.opalj.fpcf.properties.taint_xlang.{XlangForwardFlowPath, XlangForwardFlowPathMcSemaAarch64ClangO0, XlangForwardFlowPathMcSemaAarch64ClangO2, XlangForwardFlowPathMcSemaAarch64GccO0, XlangForwardFlowPathMcSemaAarch64GccO2, XlangForwardFlowPathMcSemaX8664ClangO0, XlangForwardFlowPathMcSemaX8664ClangO2, XlangForwardFlowPathMcSemaX8664GccO0, XlangForwardFlowPathMcSemaX8664GccO2}
 import org.opalj.ifds.IFDSFact
 import org.opalj.ll.fpcf.analyses.ifds.NativeIFDSAnalysisScheduler
 import org.opalj.ll.fpcf.analyses.ifds.taint.{JavaForwardTaintAnalysisScheduler, NativeForwardTaintAnalysisScheduler, NativeTaintFact}
+import org.opalj.tac.{LazyDetachedTACAIKey, TACode}
 import org.opalj.tac.cg.RTACallGraphKey
 import org.opalj.tac.fpcf.analyses.ifds.taint.TaintNullFact
 
@@ -24,6 +25,9 @@ abstract class AbstractCrossLanguageForwardTaintAnalysisTest(llvmModule: String,
     describe("CrossLanguageForwardTaintAnalysis") {
         val testContext = executeAnalyses(JavaForwardTaintAnalysisScheduler, nativeScheduler)
         val project = testContext.project
+
+        printTargetCodeMetrics(project)
+
         val eas = methodsWithAnnotations(project)
             .filter(_._1.classFile.thisType.fqn == "org/opalj/fpcf/fixtures/taint_xlang/TaintTest")
             .map {
@@ -32,6 +36,40 @@ abstract class AbstractCrossLanguageForwardTaintAnalysisTest(llvmModule: String,
             }
         testContext.propertyStore.shutdown()
         validateProperties(testContext, eas, Set(validator))
+    }
+
+    private def printTargetCodeMetrics(project: SomeProject): Unit = {
+        // count java bytecode instructions
+        val javaBcInstructionsCount = project.allProjectClassFiles
+            .filter(_.thisType.fqn == "org/opalj/fpcf/fixtures/taint_xlang/TaintTest")
+            .flatMap(_.methods)
+            .filter(_.body.isDefined)
+            .map(_.body.get.instructionsCount)
+            .sum
+
+        // count java TAC instructions
+        val tacai = project.get(LazyDetachedTACAIKey)
+        val javaTACInstructionsCount = project.allProjectClassFiles
+            .filter(_.thisType.fqn == "org/opalj/fpcf/fixtures/taint_xlang/TaintTest")
+            .flatMap(_.methods)
+            .filter(_.body.isDefined)
+            .map(m => {
+                val TACode(_, code, _, _, _) = tacai(m)
+                code
+            })
+            .map(_.length)
+            .sum
+
+        // count llvm instructions
+        val llvmInstructionsCount = project.get(LLVMProjectKey)
+            .functions
+            .flatMap(_.basicBlocks)
+            .map(_.instructions.size)
+            .sum
+
+        println("-------------------------------------------------------------------------------------")
+        println(s"Java bytecode instructions: $javaBcInstructionsCount, Java TAC instructions: $javaTACInstructionsCount, LLVM instructions: $llvmInstructionsCount")
+        println("-------------------------------------------------------------------------------------")
     }
 }
 
