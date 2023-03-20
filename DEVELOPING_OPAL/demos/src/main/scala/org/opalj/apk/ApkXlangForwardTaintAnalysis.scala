@@ -11,7 +11,7 @@ import org.opalj.fpcf.{PropertyBounds, PropertyStore}
 import org.opalj.ifds.{IFDSAnalysis, IFDSAnalysisScheduler, IFDSFact, IFDSPropertyMetaInformation}
 import org.opalj.ll.LLVMProjectKey
 import org.opalj.ll.fpcf.analyses.ifds.{LLVMFunction, LLVMStatement, McSemaUtil, NativeFunction, NativeIFDSAnalysis, NativeIFDSAnalysisScheduler}
-import org.opalj.ll.fpcf.analyses.ifds.taint.{NativeArrayElement, NativeFlowFact, NativeTaintFact, NativeTaintNullFact, NativeVariable, SimpleJavaForwardTaintProblem, SimpleNativeForwardTaintProblem}
+import org.opalj.ll.fpcf.analyses.ifds.taint.{NativeArrayElement, NativeFlowFact, NativeTaintFact, NativeTaintNullFact, SimpleJavaForwardTaintProblem, SimpleNativeForwardTaintProblem}
 import org.opalj.ll.fpcf.properties.NativeTaint
 import org.opalj.ll.llvm.value.Call
 import org.opalj.tac.{LazyDetachedTACAIKey, TACode}
@@ -115,9 +115,7 @@ class MyJavaForwardTaintProblem(p: SomeProject) extends SimpleJavaForwardTaintPr
     override protected def sanitizesReturnValue(callee: Method): Boolean = false
 
     override protected def createTaints(callee: Method, call: JavaStatement): Set[TaintFact] = {
-        // randomly taint 2% of the return values
-        val rand = new scala.util.Random
-        if (rand.nextDouble() < 0.02) Set(Variable(call.index))
+        if (callee.name == "getText") Set(Variable(call.index))
         else Set.empty
     }
 
@@ -150,15 +148,12 @@ class MyNativeForwardTaintProblem(p: SomeProject) extends SimpleNativeForwardTai
     override protected def sanitizesReturnValue(callee: NativeFunction): Boolean = false
 
     override protected def createTaints(callee: LLVMFunction, call: LLVMStatement): Set[NativeTaintFact] = {
-        // randomly taint 2% of the return values
-        val rand = new scala.util.Random
-        if (rand.nextDouble() < 0.02) {
-            if (callee.name.startsWith("sub_")) {
-                // taint return value in McSema state struct if callee is McSema sub_ function
-                Set(NativeArrayElement(
-                    call.instruction.asInstanceOf[Call].argument(0).get, // state struct
-                    McSemaUtil.getReturnRegIndices(callee.function.module.targetTriple))) // return reg indices
-            } else Set(NativeVariable(call.instruction))
+        if (McSemaUtil.matchesMcSemaFunctionName(callee.name, "sqlite3_exec")
+            || McSemaUtil.matchesMcSemaFunctionName(callee.name, "CBS_get_u16")) {
+            // taint return value in McSema state struct
+            Set(NativeArrayElement(
+                call.instruction.asInstanceOf[Call].argument(0).get, // state struct
+                McSemaUtil.getReturnRegIndices(callee.function.module.targetTriple))) // return reg indices
         }
         else Set.empty
     }
