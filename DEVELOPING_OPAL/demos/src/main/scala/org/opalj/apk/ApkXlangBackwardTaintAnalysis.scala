@@ -51,6 +51,11 @@ object ApkXlangBackwardTaintAnalysis {
                 )
         val project = ApkParser.createProject(args.head, liftedLibs, project_config, DexParser.Enjarify)
 
+        // set native call graph analysis entry points
+        project.updateProjectInformationKeyInitializationData(SimpleNativeCallGraphKey)(
+            _ => project.get(LLVMProjectKey).functions.toSet
+        )
+
         // run analysis
         project.get(RTACallGraphKey)
         val manager = project.get(FPCFAnalysesManagerKey)
@@ -71,11 +76,11 @@ object ApkXlangBackwardTaintAnalysis {
 class MyJavaBackwardTaintProblem(p: SomeProject) extends SimpleJavaBackwardTaintProblem(p) {
 
     override val entryPoints: Seq[(Method, IFDSFact[TaintFact, JavaStatement])] = p.allProjectClassFiles
-        .flatMap(_.methods)
-        .filter(_.body.isDefined)
-        .filter(_.name == "query")
-        .map(m => m -> new IFDSFact(
-            Variable(JavaIFDSProblem.switchParamAndVariableIndex(0, isStaticMethod = false))))
+            .flatMap(_.methods)
+            .filter(_.body.isDefined)
+            .filter(_.name == "query")
+            .map(m => m -> new IFDSFact(
+                Variable(JavaIFDSProblem.switchParamAndVariableIndex(0, isStaticMethod = false))))
 
     override protected def sanitizesReturnValue(callee: Method): Boolean = false
 
@@ -99,14 +104,13 @@ object MyJavaBackwardTaintAnalysisScheduler extends IFDSAnalysisScheduler[TaintF
 // define entry points, sources, sinks, and sanitizers for native code
 class MyNativeBackwardTaintProblem(p: SomeProject) extends SimpleNativeBackwardTaintProblem(Map.empty, p) {
 
-    override val entryPoints: Seq[(NativeFunction, IFDSFact[NativeTaintFact, LLVMStatement])] = {
+    override val entryPoints: Seq[(NativeFunction, IFDSFact[NativeTaintFact, LLVMStatement])] =
         p.get(LLVMProjectKey).functions
             .filter(f => McSemaUtil.matchesMcSemaFunctionName(f.name, "sqlite3_snprintf")
                 || McSemaUtil.matchesMcSemaFunctionName(f.name, "BIO_printf"))
             .filter(f => McSemaUtil.isMcSemaStateType(f.argument(0).typ))
             .toSeq
             .map(f => (LLVMFunction(f), new IFDSFact(NativeTaintNullFact)))
-    }
 
     override protected def sanitizesReturnValue(callee: NativeFunction): Boolean = false
 

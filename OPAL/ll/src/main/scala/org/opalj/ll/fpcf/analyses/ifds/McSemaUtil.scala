@@ -90,5 +90,5 @@ object McSemaUtil {
     }
 
     def matchesMcSemaFunctionName(fnameToCheck: String, matchesWith: String): Boolean =
-        fnameToCheck.startsWith("sub_") && fnameToCheck.endsWith(s"__$matchesWith")
+        fnameToCheck.startsWith("sub_") && fnameToCheck.endsWith(s"_$matchesWith")
 }
