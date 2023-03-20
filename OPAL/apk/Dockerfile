@@ -1,7 +1,7 @@
 # based on RetDec's Dockerfile (https://github.com/avast/retdec)
 
 # temporary build environment
-FROM ubuntu:jammy AS builder
+FROM ubuntu:focal AS builder
 
 RUN useradd -m opal
 WORKDIR /home/opal
@@ -25,7 +25,8 @@ RUN apt-get -y update && \
     m4                                                  \
     libtool                                             \
     unzip                                               \
-    default-jdk
+    default-jdk                                         \
+    python-is-python3
 
 
 USER opal
@@ -36,7 +37,8 @@ RUN git clone https://github.com/avast/retdec && \
     mkdir build && \
     cd build && \
     cmake .. -DCMAKE_INSTALL_PREFIX=/home/opal/retdec-install \
-        -DCMAKE_LIBRARY_PATH=/usr/lib/gcc/x86_64-linux-gnu/7/ && \
+        -DCMAKE_LIBRARY_PATH=/usr/lib/gcc/x86_64-linux-gnu/7/ \
+        -DCMAKE_BUILD_TYPE=Release && \
     make -j$(nproc) && \
     make install
 
@@ -51,7 +53,7 @@ RUN git clone https://github.com/ThexXTURBOXx/dex2jar && \
 
 
 # actual container contains only binaries
-FROM ubuntu:jammy
+FROM ubuntu:focal
 
 RUN useradd -m opal
 WORKDIR /home/opal
