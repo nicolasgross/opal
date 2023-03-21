@@ -21,7 +21,7 @@ abstract class AbstractCrossLanguageBackwardTaintAnalysisTest(llvmModule: String
         val llvmProject = p.get(LLVMProjectKey)
 
         // use all java native functions as entry points for native call graph analysis
-        val cgEntryPoints = llvmProject.functions.filter(_.name.startsWith("Java_"))
+        val cgEntryPoints = llvmProject.functions
         p.updateProjectInformationKeyInitializationData(SimpleNativeCallGraphKey)(
             current => cgEntryPoints.toSet
         )

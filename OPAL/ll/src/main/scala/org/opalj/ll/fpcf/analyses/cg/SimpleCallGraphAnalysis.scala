@@ -7,6 +7,12 @@ import org.opalj.fpcf._
 import org.opalj.ll.fpcf.analyses.ifds.{JNIMethod, LLVMFunction, NativeFunction}
 import org.opalj.ll.llvm.value.{Call, Function}
 
+class NativeCGAEntity(val entryPoints: Set[Function], val callChain: Set[Function]) {
+    // ignore call chain for hashing/equality such that property store returns same cg for entry points, ignoring the callchain
+    override def equals(obj: Any): Boolean = entryPoints.equals(obj)
+    override def hashCode(): Int = entryPoints.hashCode()
+}
+
 sealed trait SimpleCallGraphPropertyMetaInformation extends PropertyMetaInformation {
     final type Self = SimpleNativeCallGraph
 }
@@ -30,54 +36,43 @@ class SimpleCallGraphAnalysis(val project: SomeProject) extends FPCFAnalysis {
 
     def lazilyAnalyze(entity: Entity): ProperPropertyComputationResult = {
         entity match {
-            case entryPoints: Set[Function @unchecked] => analyze(entryPoints)
-            case _                                     => throw new IllegalArgumentException("Simple Call Graph Analysis can only process Sets of Functions!")
+            case nativeCGAEntity: NativeCGAEntity => analyze(nativeCGAEntity)
+            case _                                => throw new IllegalArgumentException("Simple Call Graph Analysis can only process Sets of Functions!")
         }
     }
 
-    private def analyze(entryPoints: Set[Function]): ProperPropertyComputationResult = {
-        if (entryPoints.isEmpty) Result(entryPoints, SimpleNativeCallGraph(Map.empty))
-        else if (entryPoints.size == 1) Result(entryPoints, SimpleNativeCallGraph(processFunction(entryPoints.head)))
-        else Result(entryPoints, SimpleNativeCallGraph(processMultipleEntries(entryPoints)))
+    private def analyze(entity: NativeCGAEntity): ProperPropertyComputationResult = {
+        if (entity.entryPoints.isEmpty) Result(entity, SimpleNativeCallGraph(Map.empty))
+        else if (entity.entryPoints.size == 1) Result(entity, SimpleNativeCallGraph(processFunction(entity.entryPoints.head, entity.callChain)))
+        else Result(entity, SimpleNativeCallGraph(processMultipleEntries(entity.entryPoints, entity.callChain)))
     }
 
-    private def processFunction(function: Function): CallGraph = {
+    private def processFunction(function: Function, callChain: Set[Function]): CallGraph = {
         val cg = scala.collection.mutable.Map.empty[NativeFunction, Set[Call]]
-        val entryPoints = scala.collection.mutable.Set.empty[Function]
-        val jniCallDetection = project.get(LazyJNICallDetectionKey)
+        val nextEntryPoints = scala.collection.mutable.Set.empty[Function]
 
         // process calls in this function
-        function.basicBlocks.flatMap(_.instructions).foreach {
-            case c: Call => c.calledValue match {
-                case f: Function => // normal native function call
-                    entryPoints.add(f)
-                    val newCalls = cg.getOrElse(LLVMFunction(f), Set.empty) ++ Set(c)
-                    cg.update(LLVMFunction(f), newCalls)
-                case _ => jniCallDetection(c) match {
-                    case Some(methods) =>
-                        for (jniCallee <- methods.map(JNIMethod)) {
-                            val newCalls = cg.getOrElse(jniCallee, Set.empty) ++ Set(c)
-                            cg.update(jniCallee, newCalls)
-                        }
-                    case None => None
-                }
-            }
-            case _ =>
-        }
+        project.get(NativeCalleesKey)(function).foreach(tuple => tuple._1 match {
+            case LLVMFunction(f) => // normal native function call
+                if (!callChain.contains(f)) nextEntryPoints.add(f)
+                val newCalls = cg.getOrElse(LLVMFunction(f), Set.empty) ++ Set(tuple._2)
+                cg.update(LLVMFunction(f), newCalls)
+            case jniCallee: JNIMethod =>
+                val newCalls = cg.getOrElse(jniCallee, Set.empty) ++ Set(tuple._2)
+                cg.update(jniCallee, newCalls)
+        })
 
-        // process called functions
-        val subCg = processMultipleEntries(entryPoints.toSet)
-
+        val subCg = processMultipleEntries(nextEntryPoints.toSet, callChain + function)
         mergeCallGraphs(cg.toMap, subCg)
     }
 
-    private def processMultipleEntries(entryPoints: Set[Function]): CallGraph = {
+    private def processMultipleEntries(entryPoints: Set[Function], callChain: Set[Function]): CallGraph = {
         // if multiple entry points, get individual call graphs from property store and merge them
         val cgs = entryPoints
-            .map(e => propertyStore(EPK(Set(e), SimpleNativeCallGraph.key)))
+            .map(e => propertyStore(EPK(new NativeCGAEntity(Set(e), callChain), SimpleNativeCallGraph.key)))
             .map {
-                case ep: FinalEP[Set[Function], SimpleNativeCallGraph] => ep.p.cg
-                case _                                                 => throw new RuntimeException("unexpected error while computing SimpleNativeCallGraph")
+                case ep: FinalEP[NativeCGAEntity, SimpleNativeCallGraph] => ep.p.cg
+                case _                                                   => Map.empty[NativeFunction, Set[Call]] // analysis already triggered
             }
         cgs.fold(Map.empty)(mergeCallGraphs)
     }

@@ -14,7 +14,6 @@ import org.opalj.ll.fpcf.analyses.cg.SimpleNativeCallGraphKey
 import org.opalj.ll.fpcf.analyses.ifds.{LLVMFunction, LLVMStatement, McSemaUtil, NativeFunction, NativeIFDSAnalysis, NativeIFDSAnalysisScheduler}
 import org.opalj.ll.fpcf.analyses.ifds.taint.{NativeArrayElement, NativeTaintFact, NativeTaintNullFact, SimpleJavaBackwardTaintProblem, SimpleNativeBackwardTaintProblem}
 import org.opalj.ll.fpcf.properties.NativeTaint
-import org.opalj.tac.cg.RTACallGraphKey
 import org.opalj.tac.fpcf.analyses.ifds.{JavaIFDSProblem, JavaStatement}
 import org.opalj.tac.fpcf.analyses.ifds.taint.{FlowFact, TaintFact, Variable}
 import org.opalj.tac.fpcf.properties.{TACAI, Taint}
@@ -57,7 +56,7 @@ object ApkXlangBackwardTaintAnalysis {
         )
 
         // run analysis
-        project.get(RTACallGraphKey)
+        //project.get(RTACallGraphKey)
         val manager = project.get(FPCFAnalysesManagerKey)
         val (ps, analyses) = manager.runAll(MyJavaBackwardTaintAnalysisScheduler, MyNativeBackwardTaintAnalysisScheduler)
 

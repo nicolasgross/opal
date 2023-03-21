@@ -32,9 +32,9 @@ object SimpleNativeCallGraphKey extends ProjectInformationKey[SimpleNativeCallGr
         val manager = project.get(FPCFAnalysesManagerKey)
         val (ps, _) = manager.runAll(LazySimpleCallGraphAnalysis)
         val entryPoints = project.getOrCreateProjectInformationKeyInitializationData(this, Set.empty[Function])
-        ps(EPK(entryPoints, SimpleNativeCallGraph.key)) match {
-            case ep: FinalEP[Set[Function], SimpleNativeCallGraph] => ep.p
-            case _                                                 => throw new RuntimeException("unexpected error while computing SimpleNativeCallGraph")
+        ps(EPK(new NativeCGAEntity(entryPoints, Set.empty), SimpleNativeCallGraph.key)) match {
+            case ep: FinalEP[NativeCGAEntity, SimpleNativeCallGraph] => ep.p
+            case _                                                   => throw new RuntimeException("unexpected error while computing SimpleNativeCallGraph")
         }
     }
 }
