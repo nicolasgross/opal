@@ -10,10 +10,10 @@ import org.opalj.br.fpcf.FPCFAnalysesManagerKey
 import org.opalj.fpcf.{PropertyBounds, PropertyStore}
 import org.opalj.ifds.{Callable, IFDSAnalysis, IFDSAnalysisScheduler, IFDSFact, IFDSPropertyMetaInformation}
 import org.opalj.ll.LLVMProjectKey
-import org.opalj.ll.fpcf.analyses.cg.SimpleNativeCallGraphKey
 import org.opalj.ll.fpcf.analyses.ifds.{LLVMFunction, LLVMStatement, McSemaUtil, NativeFunction, NativeIFDSAnalysis, NativeIFDSAnalysisScheduler}
 import org.opalj.ll.fpcf.analyses.ifds.taint.{NativeArrayElement, NativeTaintFact, NativeTaintNullFact, SimpleJavaBackwardTaintProblem, SimpleNativeBackwardTaintProblem}
 import org.opalj.ll.fpcf.properties.NativeTaint
+import org.opalj.tac.cg.RTACallGraphKey
 import org.opalj.tac.fpcf.analyses.ifds.{JavaIFDSProblem, JavaStatement}
 import org.opalj.tac.fpcf.analyses.ifds.taint.{FlowFact, TaintFact, Variable}
 import org.opalj.tac.fpcf.properties.{TACAI, Taint}
@@ -50,13 +50,8 @@ object ApkXlangBackwardTaintAnalysis {
                 )
         val project = ApkParser.createProject(args.head, liftedLibs, project_config, DexParser.Enjarify)
 
-        // set native call graph analysis entry points
-        project.updateProjectInformationKeyInitializationData(SimpleNativeCallGraphKey)(
-            _ => project.get(LLVMProjectKey).functions.toSet
-        )
-
         // run analysis
-        //project.get(RTACallGraphKey)
+        project.get(RTACallGraphKey)
         val manager = project.get(FPCFAnalysesManagerKey)
         val (ps, analyses) = manager.runAll(MyJavaBackwardTaintAnalysisScheduler, MyNativeBackwardTaintAnalysisScheduler)
 
@@ -135,5 +130,4 @@ object MyNativeBackwardTaintAnalysisScheduler extends NativeIFDSAnalysisSchedule
     override def init(p: SomeProject, ps: PropertyStore) = new MyNativeBackwardTaintAnalysis(p)
     override def property: IFDSPropertyMetaInformation[LLVMStatement, NativeTaintFact] = NativeTaint
     override val uses: Set[PropertyBounds] = Set()
-    override def requiredProjectInformation: ProjectInformationKeys = SimpleNativeCallGraphKey +: super.requiredProjectInformation
 }

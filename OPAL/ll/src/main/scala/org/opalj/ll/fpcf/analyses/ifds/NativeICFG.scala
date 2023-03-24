@@ -36,6 +36,6 @@ abstract class NativeICFG(project: SomeProject) extends ICFG[NativeFunction, LLV
 
     override def getCallers(callee: NativeFunction): Set[LLVMStatement] = {
         val cg = project.get(SimpleNativeCallGraphKey)
-        cg(callee).getOrElse(Set.empty).map(LLVMStatement)
+        cg.getOrElse(callee, Set.empty).map(LLVMStatement)
     }
 }

@@ -2,12 +2,15 @@
 package org.opalj.ll.fpcf.analyses.cg
 
 import org.opalj.br.analyses.{ProjectInformationKey, SomeProject}
-import org.opalj.br.fpcf.FPCFAnalysesManagerKey
-import org.opalj.fpcf.{EPK, FinalEP}
 import org.opalj.ll.LLVMProjectKey
-import org.opalj.ll.llvm.value.Function
+import org.opalj.ll.fpcf.analyses.ifds.{JNIMethod, LLVMFunction, NativeFunction}
+import org.opalj.ll.llvm.value.Call
 
-object SimpleNativeCallGraphKey extends ProjectInformationKey[SimpleNativeCallGraph, Set[Function]] {
+/**
+ * Simple native call graph implementation. Computes local callees for each function and merges all local information
+ * into one global callgraph.
+ */
+object SimpleNativeCallGraphKey extends ProjectInformationKey[Map[NativeFunction, Set[Call]], Nothing] {
 
     /**
      * The computation of the call graph requires a LLVM project.
@@ -19,22 +22,20 @@ object SimpleNativeCallGraphKey extends ProjectInformationKey[SimpleNativeCallGr
     /**
      * Computes the call graph.
      *
-     * Expects a list of entry points as project key initialization data:
-     * <pre>
-     * project.updateProjectInformationKeyInitializationData(SimpleCallGraphKey)(
-     * current => Set(llvmProject.function("main").get)
-     * )
-     * </pre>
-     *
      * @return the call graph.
      */
-    override def compute(project: SomeProject): SimpleNativeCallGraph = {
-        val manager = project.get(FPCFAnalysesManagerKey)
-        val (ps, _) = manager.runAll(LazySimpleCallGraphAnalysis)
-        val entryPoints = project.getOrCreateProjectInformationKeyInitializationData(this, Set.empty[Function])
-        ps(EPK(new NativeCGAEntity(entryPoints, Set.empty), SimpleNativeCallGraph.key)) match {
-            case ep: FinalEP[NativeCGAEntity, SimpleNativeCallGraph] => ep.p
-            case _                                                   => throw new RuntimeException("unexpected error while computing SimpleNativeCallGraph")
-        }
+    override def compute(project: SomeProject): Map[NativeFunction, Set[Call]] = {
+        val cg = scala.collection.mutable.Map.empty[NativeFunction, Set[Call]]
+        project.get(LLVMProjectKey).functions
+            .map(f => project.get(NativeCalleesKey)(f))
+            .foreach(_.foreach(tuple => tuple._1 match {
+                case LLVMFunction(f) => // normal native function call
+                    val newCalls = cg.getOrElse(LLVMFunction(f), Set.empty) ++ Set(tuple._2)
+                    cg.update(LLVMFunction(f), newCalls)
+                case jniCallee: JNIMethod =>
+                    val newCalls = cg.getOrElse(jniCallee, Set.empty) ++ Set(tuple._2)
+                    cg.update(jniCallee, newCalls)
+            }))
+        cg.toMap
     }
 }

@@ -1,11 +1,10 @@
 /* BSD 2-Clause License - see OPAL/LICENSE for details. */
 package org.opalj.ll.fpcf.analyses.ifds.taint
 
-import org.opalj.br.analyses.{ProjectInformationKeys, SomeProject}
+import org.opalj.br.analyses.SomeProject
 import org.opalj.fpcf.{PropertyBounds, PropertyKey, PropertyStore}
 import org.opalj.ifds.{Callable, IFDSFact, IFDSPropertyMetaInformation}
 import org.opalj.ll.{LLVMProject, LLVMProjectKey}
-import org.opalj.ll.fpcf.analyses.cg.SimpleNativeCallGraphKey
 import org.opalj.ll.fpcf.analyses.ifds.{LLVMFunction, LLVMStatement, McSemaUtil, NativeFunction, NativeIFDSAnalysis, NativeIFDSAnalysisScheduler}
 import org.opalj.ll.fpcf.properties.NativeTaint
 import org.opalj.tac.fpcf.properties.Taint
@@ -80,5 +79,4 @@ class NativeBackwardTaintAnalysisScheduler(ptrAliasDefs: Map[String, List[Set[St
     override def init(p: SomeProject, ps: PropertyStore) = new SimpleNativeBackwardTaintAnalysis(ptrAliasDefs, p)
     override def property: IFDSPropertyMetaInformation[LLVMStatement, NativeTaintFact] = NativeTaint
     override val uses: Set[PropertyBounds] = Set()
-    override def requiredProjectInformation: ProjectInformationKeys = SimpleNativeCallGraphKey +: super.requiredProjectInformation
 }

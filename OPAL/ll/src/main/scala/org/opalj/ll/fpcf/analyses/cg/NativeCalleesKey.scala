@@ -23,7 +23,6 @@ object NativeCalleesKey extends ProjectInformationKey[Function => Set[(NativeFun
      */
     override def compute(project: SomeProject): Function => Set[(NativeFunction, Call)] = {
         val calleesStore = TrieMap.empty[Function, Set[(NativeFunction, Call)]]
-        val counter = new AtomicInteger()
 
         def detectAndCache(function: Function): Set[(NativeFunction, Call)] = {
             val callees = scala.collection.mutable.Set.empty[(NativeFunction, Call)]
@@ -52,9 +51,7 @@ object NativeCalleesKey extends ProjectInformationKey[Function => Set[(NativeFun
                 case None => function.synchronized {
                     calleesStore.get(function) match {
                         case Some(callees) => callees
-                        case None          =>
-                            println("native callees analysis counter:" + counter.incrementAndGet())
-                            detectAndCache(function)
+                        case None          => detectAndCache(function)
                     }
                 }
             }
