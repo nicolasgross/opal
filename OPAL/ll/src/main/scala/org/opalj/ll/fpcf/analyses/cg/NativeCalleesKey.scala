@@ -6,7 +6,6 @@ import org.opalj.ll.LLVMProjectKey
 import org.opalj.ll.fpcf.analyses.ifds.{JNIMethod, LLVMFunction, NativeFunction}
 import org.opalj.ll.llvm.value.{Call, Function}
 
-import java.util.concurrent.atomic.AtomicInteger
 import scala.collection.concurrent.TrieMap
 
 object NativeCalleesKey extends ProjectInformationKey[Function => Set[(NativeFunction, Call)], Nothing] {
