@@ -69,12 +69,7 @@ object ApkXlangBackwardTaintAnalysis {
 // define entry points, sources, sinks, and sanitizers for Java code
 class MyJavaBackwardTaintProblem(p: SomeProject) extends SimpleJavaBackwardTaintProblem(p) {
 
-    override val entryPoints: Seq[(Method, IFDSFact[TaintFact, JavaStatement])] = p.allProjectClassFiles
-            .flatMap(_.methods)
-            .filter(_.body.isDefined)
-            .filter(_.name == "query")
-            .map(m => m -> new IFDSFact(
-                Variable(JavaIFDSProblem.switchParamAndVariableIndex(0, isStaticMethod = false))))
+    override val entryPoints: Seq[(Method, IFDSFact[TaintFact, JavaStatement])] = Seq.empty
 
     override protected def sanitizesReturnValue(callee: Method): Boolean = false
 
@@ -100,8 +95,7 @@ class MyNativeBackwardTaintProblem(p: SomeProject) extends SimpleNativeBackwardT
 
     override val entryPoints: Seq[(NativeFunction, IFDSFact[NativeTaintFact, LLVMStatement])] =
         p.get(LLVMProjectKey).functions
-            .filter(f => McSemaUtil.matchesMcSemaFunctionName(f.name, "sqlite3_snprintf")
-                || McSemaUtil.matchesMcSemaFunctionName(f.name, "BIO_printf"))
+            .filter(f => McSemaUtil.matchesMcSemaFunctionName(f.name, "aes_encrypt"))
             .filter(f => McSemaUtil.isMcSemaStateType(f.argument(0).typ))
             .toSeq
             .map(f => (LLVMFunction(f), new IFDSFact(NativeTaintNullFact)))
@@ -113,10 +107,9 @@ class MyNativeBackwardTaintProblem(p: SomeProject) extends SimpleNativeBackwardT
 
     override def createFlowFactAtExit(callee: NativeFunction, in: NativeTaintFact,
                                       unbCallChain: Seq[Callable]): Option[NativeTaintFact] = callee match {
-        case LLVMFunction(function) if (McSemaUtil.matchesMcSemaFunctionName(function.name, "sqlite3_snprintf")
-            || McSemaUtil.matchesMcSemaFunctionName(function.name, "BIO_printf")) &&
+        case LLVMFunction(function) if McSemaUtil.matchesMcSemaFunctionName(function.name, "aes_encrypt") &&
             McSemaUtil.isMcSemaStateType(function.argument(0).typ) =>
-            Some(NativeArrayElement(function.argument(0), McSemaUtil.getArgRegIndices(function.module.targetTriple, 1)))
+            Some(NativeArrayElement(function.argument(0), McSemaUtil.getArgRegIndices(function.module.targetTriple, 0)))
         case _ => None
     }
 }
