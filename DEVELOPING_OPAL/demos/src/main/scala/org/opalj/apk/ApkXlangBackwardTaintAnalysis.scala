@@ -14,8 +14,8 @@ import org.opalj.ll.fpcf.analyses.ifds.{LLVMFunction, LLVMStatement, McSemaUtil,
 import org.opalj.ll.fpcf.analyses.ifds.taint.{NativeArrayElement, NativeTaintFact, NativeTaintNullFact, SimpleJavaBackwardTaintProblem, SimpleNativeBackwardTaintProblem}
 import org.opalj.ll.fpcf.properties.NativeTaint
 import org.opalj.tac.cg.RTACallGraphKey
-import org.opalj.tac.fpcf.analyses.ifds.{JavaIFDSProblem, JavaStatement}
-import org.opalj.tac.fpcf.analyses.ifds.taint.{FlowFact, TaintFact, Variable}
+import org.opalj.tac.fpcf.analyses.ifds.JavaStatement
+import org.opalj.tac.fpcf.analyses.ifds.taint.{FlowFact, TaintFact}
 import org.opalj.tac.fpcf.properties.{TACAI, Taint}
 
 import scala.annotation.unused
