@@ -42,12 +42,13 @@ object ApkXlangBackwardTaintAnalysis {
         // create APK based project
         val liftedLibs = if (args.length == 1) List.empty else args.tail.toList
         val project_config = BaseConfig.withValue(
-                InitialEntryPointsKey.ConfigKey, ConfigValueFactory.fromAnyRef(
-                    "org.opalj.br.analyses.cg.AllEntryPointsFinder"
-                ))
+            InitialEntryPointsKey.ConfigKey, ConfigValueFactory.fromAnyRef(
+                "org.opalj.br.analyses.cg.AllEntryPointsFinder"
+            )
+        )
             .withValue(
-                    AllEntryPointsFinder.ConfigKey, ConfigValueFactory.fromAnyRef(true)
-                )
+                AllEntryPointsFinder.ConfigKey, ConfigValueFactory.fromAnyRef(true)
+            )
         val project = ApkParser.createProject(args.head, liftedLibs, project_config, DexParser.Enjarify)
 
         // run analysis
@@ -64,7 +65,6 @@ object ApkXlangBackwardTaintAnalysis {
         BasicReport("Done.")
     }
 }
-
 
 // define entry points, sources, sinks, and sanitizers for Java code
 class MyJavaBackwardTaintProblem(p: SomeProject) extends SimpleJavaBackwardTaintProblem(p) {
@@ -88,7 +88,6 @@ object MyJavaBackwardTaintAnalysisScheduler extends IFDSAnalysisScheduler[TaintF
     override def requiredProjectInformation: ProjectInformationKeys = Seq(LLVMProjectKey)
     override val uses: Set[PropertyBounds] = Set(PropertyBounds.finalP(TACAI), PropertyBounds.ub(NativeTaint))
 }
-
 
 // define entry points, sources, sinks, and sanitizers for native code
 class MyNativeBackwardTaintProblem(p: SomeProject) extends SimpleNativeBackwardTaintProblem(Map.empty, p) {

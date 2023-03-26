@@ -32,7 +32,7 @@ object ConstantExpression {
             // case LLVMSRem           => SRemConst(ref)
             // case LLVMFRem           => FRemConst(ref)
             // case LLVMShl            => ShlConst(ref)
-            case LLVMLShr           => LShrConst(ref)
+            case LLVMLShr          => LShrConst(ref)
             // case LLVMAShr           => AShrConst(ref)
             // case LLVMAnd            => AndConst(ref)
             // case LLVMOr             => OrConst(ref)

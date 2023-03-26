@@ -30,9 +30,9 @@ object McSemaUtil {
     def getArgRegIndices(targetTriple: String, index: Int): Seq[Long] = {
         if (targetTriple.startsWith("x86_64")) index match {
             case 0 => Seq(0, 6, 11, 0, 0) // indices of RDI in McSema state
-            case 1 => Seq(0, 6, 9, 0, 0)  // indices of RSI in McSema state
-            case 2 => Seq(0, 6, 7, 0, 0)  // indices of RDX in McSema state
-            case 3 => Seq(0, 6, 5, 0, 0)  // indices of RCX in McSema state
+            case 1 => Seq(0, 6, 9, 0, 0) // indices of RSI in McSema state
+            case 2 => Seq(0, 6, 7, 0, 0) // indices of RDX in McSema state
+            case 3 => Seq(0, 6, 5, 0, 0) // indices of RCX in McSema state
             case _ => Seq.empty
         }
         else if (targetTriple.startsWith("aarch64")) index match {

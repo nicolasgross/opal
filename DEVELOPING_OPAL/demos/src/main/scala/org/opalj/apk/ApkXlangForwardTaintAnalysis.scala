@@ -43,12 +43,13 @@ object ApkXlangForwardTaintAnalysis {
         // create APK based project
         val liftedLibs = if (args.length == 1) List.empty else args.tail.toList
         val project_config = BaseConfig.withValue(
-                InitialEntryPointsKey.ConfigKey, ConfigValueFactory.fromAnyRef(
-                    "org.opalj.br.analyses.cg.AllEntryPointsFinder"
-                ))
+            InitialEntryPointsKey.ConfigKey, ConfigValueFactory.fromAnyRef(
+                "org.opalj.br.analyses.cg.AllEntryPointsFinder"
+            )
+        )
             .withValue(
-                    AllEntryPointsFinder.ConfigKey, ConfigValueFactory.fromAnyRef(true)
-                )
+                AllEntryPointsFinder.ConfigKey, ConfigValueFactory.fromAnyRef(true)
+            )
         val project = ApkParser.createProject(args.head, liftedLibs, project_config, DexParser.Enjarify)
 
         printTargetCodeMetrics(project)
@@ -68,7 +69,7 @@ object ApkXlangForwardTaintAnalysis {
     }
 
     private def printTargetCodeMetrics(project: SomeProject): Unit = {
-         // count java bytecode instructions
+        // count java bytecode instructions
         val javaBcInstructionsCount = project.allProjectClassFiles
             .flatMap(_.methods)
             .filter(_.body.isDefined)
@@ -99,7 +100,6 @@ object ApkXlangForwardTaintAnalysis {
         println("-----------------------------------------------------------------------------------------------------")
     }
 }
-
 
 // define entry points, sources, sinks, and sanitizers for Java code
 class MyJavaForwardTaintProblem(p: SomeProject) extends SimpleJavaForwardTaintProblem(p) {
@@ -132,7 +132,6 @@ object MyJavaForwardTaintAnalysisScheduler extends IFDSAnalysisScheduler[TaintFa
     override def requiredProjectInformation: ProjectInformationKeys = Seq(LLVMProjectKey)
     override val uses: Set[PropertyBounds] = Set(PropertyBounds.finalP(TACAI), PropertyBounds.ub(NativeTaint))
 }
-
 
 // define entry points, sources, sinks, and sanitizers for native code
 class MyNativeForwardTaintProblem(p: SomeProject) extends SimpleNativeForwardTaintProblem(Map.empty, p) {
