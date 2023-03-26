@@ -10,10 +10,9 @@ import org.opalj.br.fpcf.FPCFAnalysesManagerKey
 import org.opalj.fpcf.{PropertyBounds, PropertyStore}
 import org.opalj.ifds.{IFDSAnalysis, IFDSAnalysisScheduler, IFDSFact, IFDSPropertyMetaInformation}
 import org.opalj.ll.LLVMProjectKey
-import org.opalj.ll.fpcf.analyses.ifds.{LLVMFunction, LLVMStatement, McSemaUtil, NativeFunction, NativeIFDSAnalysis, NativeIFDSAnalysisScheduler}
-import org.opalj.ll.fpcf.analyses.ifds.taint.{NativeArrayElement, NativeFlowFact, NativeTaintFact, NativeTaintNullFact, SimpleJavaForwardTaintProblem, SimpleNativeForwardTaintProblem}
+import org.opalj.ll.fpcf.analyses.ifds.{LLVMFunction, LLVMStatement, NativeFunction, NativeIFDSAnalysis, NativeIFDSAnalysisScheduler}
+import org.opalj.ll.fpcf.analyses.ifds.taint.{NativeFlowFact, NativeTaintFact, SimpleJavaForwardTaintProblem, SimpleNativeForwardTaintProblem}
 import org.opalj.ll.fpcf.properties.NativeTaint
-import org.opalj.ll.llvm.value.Call
 import org.opalj.tac.{LazyDetachedTACAIKey, TACode}
 import org.opalj.tac.cg.RTACallGraphKey
 import org.opalj.tac.fpcf.analyses.ifds.JavaStatement
@@ -107,7 +106,7 @@ class MyJavaForwardTaintProblem(p: SomeProject) extends SimpleJavaForwardTaintPr
 
     override val entryPoints: Seq[(Method, IFDSFact[TaintFact, JavaStatement])] = for {
         m <- p.allProjectClassFiles
-            .filter(classFile => classFile.thisType.fqn.startsWith("de/rki/coronawarnapp"))
+            .filter(classFile => classFile.thisType.fqn.startsWith("com/kunzisoft/keepass"))
             .flatMap(_.methods)
             .filter(_.body.isDefined)
     } yield m -> new IFDSFact(TaintNullFact)
@@ -115,7 +114,7 @@ class MyJavaForwardTaintProblem(p: SomeProject) extends SimpleJavaForwardTaintPr
     override protected def sanitizesReturnValue(callee: Method): Boolean = false
 
     override protected def createTaints(callee: Method, call: JavaStatement): Set[TaintFact] = {
-        if (callee.name == "getText") Set(Variable(call.index))
+        if (callee.name == "getPassword") Set(Variable(call.index))
         else Set.empty
     }
 
@@ -138,25 +137,11 @@ object MyJavaForwardTaintAnalysisScheduler extends IFDSAnalysisScheduler[TaintFa
 // define entry points, sources, sinks, and sanitizers for native code
 class MyNativeForwardTaintProblem(p: SomeProject) extends SimpleNativeForwardTaintProblem(Map.empty, p) {
 
-    override val entryPoints: Seq[(NativeFunction, IFDSFact[NativeTaintFact, LLVMStatement])] = {
-        p.get(LLVMProjectKey).functions
-            .filter(f => f.name.startsWith("sql") || f.name.startsWith("SSL") || f.name.startsWith("X509"))
-            .toSeq
-            .map(f => (LLVMFunction(f), new IFDSFact(NativeTaintNullFact)))
-    }
+    override val entryPoints: Seq[(NativeFunction, IFDSFact[NativeTaintFact, LLVMStatement])] = Seq.empty
 
     override protected def sanitizesReturnValue(callee: NativeFunction): Boolean = false
 
-    override protected def createTaints(callee: LLVMFunction, call: LLVMStatement): Set[NativeTaintFact] = {
-        if (McSemaUtil.matchesMcSemaFunctionName(callee.name, "sqlite3_exec")
-            || McSemaUtil.matchesMcSemaFunctionName(callee.name, "CBS_get_u16")) {
-            // taint return value in McSema state struct
-            Set(NativeArrayElement(
-                call.instruction.asInstanceOf[Call].argument(0).get, // state struct
-                McSemaUtil.getReturnRegIndices(callee.function.module.targetTriple))) // return reg indices
-        }
-        else Set.empty
-    }
+    override protected def createTaints(callee: LLVMFunction, call: LLVMStatement): Set[NativeTaintFact] = Set.empty
 
     override protected def createFlowFact(call: LLVMStatement, in: NativeTaintFact): Option[NativeFlowFact] = None
 }
