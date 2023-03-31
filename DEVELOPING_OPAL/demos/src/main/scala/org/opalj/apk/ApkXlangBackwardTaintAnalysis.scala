@@ -94,7 +94,7 @@ class MyNativeBackwardTaintProblem(p: SomeProject) extends SimpleNativeBackwardT
 
     override val entryPoints: Seq[(NativeFunction, IFDSFact[NativeTaintFact, LLVMStatement])] =
         p.get(LLVMProjectKey).functions
-            .filter(f => McSemaUtil.matchesMcSemaFunctionName(f.name, "sha256_hash"))
+            .filter(f => McSemaUtil.matchesMcSemaFunctionName(f.name, "Java_com_google_android_libraries_barhopper_BarhopperV2_recognizeBitmapNative"))
             .filter(f => McSemaUtil.isMcSemaStateType(f.argument(0).typ))
             .toSeq
             .map(f => (LLVMFunction(f), new IFDSFact(NativeTaintNullFact)))
@@ -106,9 +106,9 @@ class MyNativeBackwardTaintProblem(p: SomeProject) extends SimpleNativeBackwardT
 
     override def createFlowFactAtExit(callee: NativeFunction, in: NativeTaintFact,
                                       unbCallChain: Seq[Callable]): Option[NativeTaintFact] = callee match {
-        case LLVMFunction(function) if McSemaUtil.matchesMcSemaFunctionName(function.name, "sha256_hash") &&
+        case LLVMFunction(function) if McSemaUtil.matchesMcSemaFunctionName(function.name, "Java_com_google_android_libraries_barhopper_BarhopperV2_recognizeBitmapNative") &&
             McSemaUtil.isMcSemaStateType(function.argument(0).typ) =>
-            Some(NativeArrayElement(function.argument(0), McSemaUtil.getArgRegIndices(function.module.targetTriple, 0)))
+            Some(NativeArrayElement(function.argument(0), McSemaUtil.getArgRegIndices(function.module.targetTriple, 3)))
         case _ => None
     }
 }

@@ -104,17 +104,26 @@ object ApkXlangForwardTaintAnalysis {
 // define entry points, sources, sinks, and sanitizers for Java code
 class MyJavaForwardTaintProblem(p: SomeProject) extends SimpleJavaForwardTaintProblem(p) {
 
-    override val entryPoints: Seq[(Method, IFDSFact[TaintFact, JavaStatement])] = for {
-        m <- p.allProjectClassFiles
-            .filter(classFile => classFile.thisType.fqn.startsWith("com/kunzisoft/keepass"))
+    override val entryPoints: Seq[(Method, IFDSFact[TaintFact, JavaStatement])] = {
+        val ep1: Seq[(Method, IFDSFact[TaintFact, JavaStatement])] = p.get(ApkComponentsKey).flatMap(
+            cmp => p.allProjectClassFiles
+                .find(cf => cf.thisType.toJava == cmp.clazz).get
+                .methods
+                .filter(m => cmp.entryFunctions().contains(m.name))
+                .filter(_.body.isDefined)
+                .map(m => (m, new IFDSFact(TaintNullFact))))
+        val ep2: Seq[(Method, IFDSFact[TaintFact, JavaStatement])] = p.allProjectClassFiles
             .flatMap(_.methods)
+            .filter(_.name == "onClick")
             .filter(_.body.isDefined)
-    } yield m -> new IFDSFact(TaintNullFact)
+            .map(m => (m, new IFDSFact(TaintNullFact)))
+        ep1 ++ ep2
+    }
 
     override protected def sanitizesReturnValue(callee: Method): Boolean = false
 
     override protected def createTaints(callee: Method, call: JavaStatement): Set[TaintFact] = {
-        if (callee.name == "getPassword") Set(Variable(call.index))
+        if (callee.name == "unwrapSecret") Set(Variable(call.index))
         else Set.empty
     }
 
