@@ -111,7 +111,8 @@ class MyJavaForwardTaintProblem(p: SomeProject) extends SimpleJavaForwardTaintPr
                 .methods
                 .filter(m => cmp.entryFunctions().contains(m.name))
                 .filter(_.body.isDefined)
-                .map(m => (m, new IFDSFact(TaintNullFact))))
+                .map(m => (m, new IFDSFact(TaintNullFact)))
+        )
         val ep2: Seq[(Method, IFDSFact[TaintFact, JavaStatement])] = p.allProjectClassFiles
             .flatMap(_.methods)
             .filter(_.name == "onClick")
