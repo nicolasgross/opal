@@ -29,6 +29,9 @@ class SimpleNativeForwardTaintProblem(ptrAliasDefs: Map[String, List[Set[String]
      */
     override protected def sanitizesParameter(call: LLVMStatement, in: NativeTaintFact): Boolean = false
 
+    /**
+     * Taint the return value of the source function.
+     */
     override protected def createTaints(callee: LLVMFunction, call: LLVMStatement): Set[NativeTaintFact] =
         if (callee.name == "source") Set(NativeVariable(call.instruction))
         else if (McSemaUtil.matchesMcSemaFunctionName(callee.name, "source"))
@@ -38,6 +41,9 @@ class SimpleNativeForwardTaintProblem(ptrAliasDefs: Map[String, List[Set[String]
             ))
         else Set.empty
 
+    /**
+     * Create flow fact if tainted value reaches the sink function.
+     */
     override protected def createFlowFact(call: LLVMStatement, in: NativeTaintFact): Option[NativeFlowFact] = {
         icfg.getCalleesIfCallStatement(call).get.foreach(callee => {
             val callInstr = call.instruction.asInstanceOf[Call]

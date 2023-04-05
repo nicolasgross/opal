@@ -14,6 +14,11 @@ import org.opalj.tac.fpcf.analyses.ifds.{JavaIFDSProblem, JavaMethod, JavaStatem
 import org.opalj.tac.fpcf.analyses.ifds.taint.{ArrayElement, FlowFact, InstanceField, JavaBackwardTaintProblem, StaticField, TaintFact, TaintNullFact, Variable}
 import org.opalj.tac.fpcf.properties.{TACAI, Taint}
 
+/**
+ * Implementation of the Java side of a Java-LLVM cross-language backward taint analysis.
+ *
+ * @author Nicolas Gross
+ */
 class SimpleJavaBackwardTaintProblem(p: SomeProject) extends JavaBackwardTaintProblem(p) {
     val llvmProject = p.get(LLVMProjectKey)
     val nativeICFG = new NativeBackwardICFG(p)
@@ -30,6 +35,9 @@ class SimpleJavaBackwardTaintProblem(p: SomeProject) extends JavaBackwardTaintPr
                 Variable(JavaIFDSProblem.switchParamAndVariableIndex(0, isStaticMethod = true))
             ))
 
+    /**
+     * Source is also a sanitizer in backward analysis.
+     */
     override protected def sanitizesReturnValue(callee: Method): Boolean =
         callee.name == "sanitize" || callee.name == "source"
 
@@ -68,7 +76,9 @@ class SimpleJavaBackwardTaintProblem(p: SomeProject) extends JavaBackwardTaintPr
     override def createFlowFactAtExit(callee: Method, in: TaintFact,
                                       unbCallChain: Seq[Callable]): Option[FlowFact] = None
 
-    // Multilingual additions here
+    /**
+     * Handle cross-language calls from Java code to native code.
+     */
     override def outsideAnalysisContextCall(callee: Method): Option[OutsideAnalysisContextCallHandler] = {
         def handleNativeMethod(call: JavaStatement, successor: Option[JavaStatement],
                                in: TaintFact, unbCallChain: Seq[Callable], dependeesGetter: Getter): Set[TaintFact] = {
@@ -109,6 +119,9 @@ class SimpleJavaBackwardTaintProblem(p: SomeProject) extends JavaBackwardTaintPr
         else super.outsideAnalysisContextCall(callee)
     }
 
+    /**
+     * Handle Java-to-native unbalanced returns.
+     */
     override def outsideAnalysisContextUnbReturn(callee: Method): Option[OutsideAnalysisContextUnbReturnHandler] = {
         def handleNativeUnbalancedReturn(callee: Method, in: TaintFact, callChain: Seq[Callable],
                                          dependeesGetter: Getter): Unit = {
@@ -130,6 +143,12 @@ class SimpleJavaBackwardTaintProblem(p: SomeProject) extends JavaBackwardTaintPr
         Some(handleNativeUnbalancedReturn _)
     }
 
+    /**
+     * Each tainted parameter in the callee must also be tainted in the caller. In case a tainted variable reached
+     * a source function via the callee, a FlowFact(flow) is created in the caller, where flow holds the call
+     * chain from the caller to the respective sink function. In addition, tainted Java static fields are propagated
+     * to the caller. The respective Java taint facts are mapped to native taint facts.
+     */
     private def nativeUnbalancedReturnFlow(callee: Method, call: LLVMStatement, in: TaintFact): Set[NativeTaintFact] = {
         val callInstr = call.instruction.asInstanceOf[Call]
 
@@ -156,6 +175,13 @@ class SimpleJavaBackwardTaintProblem(p: SomeProject) extends JavaBackwardTaintPr
         }
     }
 
+    /**
+     * As with the other call flow functions, pass-by-reference parameters, including this, must be tainted in
+     * the callee context if they are tainted in the caller context. If the return value is tainted in the caller
+     * context, it is only tainted in the callee context if the callee is not marked as sanitizer. In addition,
+     * tainted static fields are propagated to the callee. The respective Java taint facts are mapped to native
+     * taint facts.
+     */
     private def nativeCallFlow(start: LLVMStatement, call: JavaStatement, javaCallee: Method,
                                in: TaintFact): Set[NativeTaintFact] = {
         val flow = collection.mutable.Set.empty[NativeTaintFact]
@@ -202,6 +228,12 @@ class SimpleJavaBackwardTaintProblem(p: SomeProject) extends JavaBackwardTaintPr
         flow.toSet
     }
 
+    /**
+     * Each tainted parameter in the callee must also be tainted in the caller. In case a tainted variable
+     * reached a source function via the callee, a FlowFact(flow) is created in the caller, where flow holds
+     * the call chain from the caller to the respective sink function. In addition, tainted Java static fields
+     * are propagated to the caller. The respective native taint facts are mapped to Java taint facts.
+     */
     private def nativeReturnFlow(in: NativeTaintFact, call: JavaStatement, callee: LLVMFunction,
                                  javaNativeCallee: Method, unbCallChain: Seq[Callable]): Set[TaintFact] = {
         val callStatement = JavaIFDSProblem.asCall(call.stmt)

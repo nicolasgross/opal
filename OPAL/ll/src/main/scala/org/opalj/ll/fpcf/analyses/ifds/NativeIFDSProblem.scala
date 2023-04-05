@@ -63,10 +63,10 @@ abstract class NativeIFDSProblem[Fact <: AbstractIFDSFact, JavaFact <: AbstractI
     /**
      * Computes the data flow for a call to start edge.
      *
+     * @param start The start statement for the analysis.
      * @param call The analyzed call statement.
      * @param callee The called method, for which the data flow shall be computed.
      * @param in The fact which holds before the execution of the `call`.
-     * @param source The entity, which is analyzed.
      * @return The facts, which hold after the execution of `statement` under the assumption that
      *         the facts in `in` held before `statement` and `statement` calls `callee`.
      */
@@ -77,6 +77,17 @@ abstract class NativeIFDSProblem[Fact <: AbstractIFDSFact, JavaFact <: AbstractI
         in:     Fact
     ): Set[JavaFact]
 
+    /**
+     * Computes the cross-language data flow for a return from Java code back to native code.
+     *
+     * @param exit the exit statement of the Java method.
+     * @param in the fact which holds at the exit statement.
+     * @param call the call instruction of the Java method in native code.
+     * @param callFact the fact which held before the call.
+     * @param unbCallChain the current callchain of unbalanced returns.
+     * @param successor the successor statement of the call in native code.
+     * @return the facts that hold after the return of the Java method to native code.
+     */
     protected def javaReturnFlow(
         exit:         JavaStatement,
         in:           JavaFact,

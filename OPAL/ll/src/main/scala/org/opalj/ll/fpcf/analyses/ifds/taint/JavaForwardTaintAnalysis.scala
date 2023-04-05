@@ -108,7 +108,7 @@ class SimpleJavaForwardTaintProblem(p: SomeProject) extends JavaForwardTaintProb
      * @param call The analyzed call statement.
      * @param callee The called method, for which the data flow shall be computed.
      * @param in The fact which holds before the execution of the `call`.
-     * @param source The entity, which is analyzed.
+     * @param javaCallee The corresponding native Java method.
      * @return The facts, which hold after the execution of `statement` under the assumption that
      *         the facts in `in` held before `statement` and `statement` calls `callee`.
      */
@@ -167,9 +167,11 @@ class SimpleJavaForwardTaintProblem(p: SomeProject) extends JavaForwardTaintProb
     /**
      * Computes the data flow for an exit to return edge.
      *
-     * @param call The statement, which called the `callee`.
      * @param exit The statement, which terminated the `callee`.
      * @param in The fact which holds before the execution of the `exit`.
+     * @param call The statement, which called the `callee`.
+     * @param callFact the fact valid at the Java call-site before the call.
+     * @param successor the Java successor statement of the call.
      * @return The facts, which hold after the execution of `exit` in the caller's context
      *         under the assumption that `in` held before the execution of `exit` and that
      *         `successor` will be executed next.

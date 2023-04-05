@@ -94,11 +94,12 @@ abstract class NativeForwardTaintProblem(project: SomeProject)
     /**
      * Computes the data flow for a call to start edge.
      *
-     * @param call   The analyzed call statement.
-     * @param callee The called method, for which the data flow shall be computed.
+     * @param start  The statement, which starts the analysis of the 'callee'.
      * @param in     The fact which holds before the execution of the `call`.
-     * @return The facts, which hold after the execution of `statement` under the assumption that
-     *         the facts in `in` held before `statement` and `statement` calls `callee`.
+     * @param call   The statement, which called the `callee`.
+     * @param callee The called method, for which the data flow shall be computed.
+     * @return The facts, which hold after the execution of `call` under the assumption that
+     *         the fact `in` held before `call` and `call` calls `callee`.
      */
     override def callFlow(start: LLVMStatement, in: NativeTaintFact, call: LLVMStatement, callee: NativeFunction): Set[NativeTaintFact] = callee match {
         case LLVMFunction(callee) =>
@@ -124,9 +125,11 @@ abstract class NativeForwardTaintProblem(project: SomeProject)
     /**
      * Computes the data flow for an exit to return edge.
      *
-     * @param call The statement, which called the `callee`.
-     * @param exit The statement, which terminated the `callee`.
-     * @param in   The fact which holds before the execution of the `exit`.
+     * @param exit     The statement, which terminated the analysis of the `callee`.
+     * @param in       The fact which holds before the execution of the `exit`.
+     * @param call     The statement, which called the `callee`.
+     * @param successor The successor statement of the call, might be None if unbalanced return.
+     * @param unbCallChain The current call chain of unbalanced returns.
      * @return The facts, which hold after the execution of `exit` in the caller's context
      *         under the assumption that `in` held before the execution of `exit` and that
      *         `successor` will be executed next.
@@ -191,7 +194,10 @@ abstract class NativeForwardTaintProblem(project: SomeProject)
      * Computes the data flow for a call to return edge.
      *
      * @param call The statement, which invoked the call.
-     * @param in   The facts, which hold before the `call`.
+     * @param callee The function that is called.
+     * @param in The facts, which hold before the `call`.
+     * @param successor The statement after the call within the caller.
+     * @param unbCallChain The current call chain of unbalanced returns.
      * @return The facts, which hold after the call independently of what happens in the callee
      *         under the assumption that `in` held before `call`.
      */
@@ -240,10 +246,10 @@ abstract class NativeForwardTaintProblem(project: SomeProject)
     /**
      * Computes the data flow for a call to start edge.
      *
+     * @param start The start statement for the analysis.
      * @param call The analyzed call statement.
      * @param callee The called method, for which the data flow shall be computed.
      * @param in The fact which holds before the execution of the `call`.
-     * @param source The entity, which is analyzed.
      * @return The facts, which hold after the execution of `statement` under the assumption that
      *         the facts in `in` held before `statement` and `statement` calls `callee`.
      */
@@ -270,12 +276,13 @@ abstract class NativeForwardTaintProblem(project: SomeProject)
     /**
      * Computes the data flow for an exit to return edge.
      *
-     * @param call The statement, which called the `callee`.
-     * @param exit The statement, which terminated the `callee`.
-     * @param in The fact which holds before the execution of the `exit`.
-     * @return The facts, which hold after the execution of `exit` in the caller's context
-     *         under the assumption that `in` held before the execution of `exit` and that
-     *         `successor` will be executed next.
+     * @param exit the exit statement of the Java method.
+     * @param in the fact which holds at the exit statement.
+     * @param call the call instruction of the Java method in native code.
+     * @param callFact the fact which held before the call.
+     * @param unbCallChain the current callchain of unbalanced returns.
+     * @param successor the successor statement of the call in native code.
+     * @return the facts that hold after the return of the Java method to native code.
      */
     override protected def javaReturnFlow(
         exit:         JavaStatement,

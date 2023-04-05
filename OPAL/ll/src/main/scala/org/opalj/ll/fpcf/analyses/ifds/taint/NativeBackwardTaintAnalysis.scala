@@ -30,7 +30,7 @@ class SimpleNativeBackwardTaintProblem(ptrAliasDefs: Map[String, List[Set[String
     }
 
     /**
-     * The sanitize method is a sanitizer.
+     * The sanitize method is a sanitizer. In backward analyses, the source method is also a sanitizer.
      */
     override protected def sanitizesReturnValue(callee: NativeFunction): Boolean =
         callee.name == "sanitize" || McSemaUtil.matchesMcSemaFunctionName(callee.name, "sanitize") ||
@@ -41,6 +41,9 @@ class SimpleNativeBackwardTaintProblem(ptrAliasDefs: Map[String, List[Set[String
      */
     override protected def sanitizesParameter(call: LLVMStatement, in: NativeTaintFact): Boolean = false
 
+    /**
+     * The return value of the source function is tainted.
+     */
     override protected def createFlowFactAtCall(call: LLVMStatement, in: NativeTaintFact,
                                                 unbCallChain: Seq[Callable]): Option[NativeTaintFact] = {
         // create flow facts if callee is source

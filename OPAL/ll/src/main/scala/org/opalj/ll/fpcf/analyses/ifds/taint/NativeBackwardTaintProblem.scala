@@ -13,6 +13,11 @@ import org.opalj.tac.{ArrayLength, ArrayLoad, BinaryExpr, Compare, Expr, GetFiel
 import org.opalj.tac.fpcf.analyses.ifds.{JavaBackwardICFG, JavaICFG, JavaIFDSProblem, JavaMethod, JavaStatement}
 import org.opalj.tac.fpcf.analyses.ifds.taint.{ArrayElement, FlowFact, InstanceField, StaticField, TaintFact, TaintNullFact, TaintProblem, Variable}
 
+/**
+ * Implementation of the LLVM side of a Java-LLVM cross-language backward taint analysis.
+ *
+ * @author Nicolas Gross
+ */
 abstract class NativeBackwardTaintProblem(project: SomeProject)
     extends NativeBackwardIFDSProblem[NativeTaintFact, TaintFact](project)
     with TaintProblem[NativeFunction, LLVMStatement, NativeTaintFact] {
@@ -24,6 +29,22 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
 
     override def needsPredecessor(statement: LLVMStatement): Boolean = false
 
+    /**
+     * Whenever a value is stored in a tainted variable or array element, the value must be
+     * tainted and the existing taint fact of the store destination must be removed. If a tainted variable is
+     * loaded, the load source must be tainted. If a tainted variable is assigned the value of a GetElementPtr
+     * statement, either a NativeVariable for the whole array or a NativeArrayElement taint fact must be created,
+     * depending on whether the indices in the statement are constant or not. Whenever an expression, e.g.,
+     * addition or typecast, is assigned to a tainted variable, the values in the expression must be tainted.
+     *
+     * @param statement   The analyzed statement.
+     * @param in          The fact which holds before the execution of the `statement`.
+     * @param predecessor The predecessor of the analyzed `statement`, for which the data flow shall be
+     *                    computed. Used for phi statements to distinguish the flow.
+     * @return The facts, which hold after the execution of `statement` under the assumption
+     *         that the facts in `in` held before `statement` and `successor` will be
+     *         executed next.
+     */
     override def normalFlow(statement: LLVMStatement, in: NativeTaintFact,
                             predecessor: Option[LLVMStatement]): Set[NativeTaintFact] = statement.instruction match {
         case store: Store =>
@@ -148,6 +169,18 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
         case _ => Set(in)
     }
 
+    /**
+     * If the return value is tainted in the caller context and the callee is not marked as sanitizer,
+     * the return value must also be tainted in the callee context. Tainted pass-by-reference parameters and
+     * global variables are always propagated to the callee.
+     *
+     * @param start  The statement, which starts the analysis of the 'callee'.
+     * @param in     The fact which holds before the execution of the `call`.
+     * @param call   The statement, which called the `callee`.
+     * @param callee The called method, for which the data flow shall be computed.
+     * @return The facts, which hold after the execution of `call` under the assumption that
+     *         the fact `in` held before `call` and `call` calls `callee`.
+     */
     override def callFlow(start: LLVMStatement, in: NativeTaintFact, call: LLVMStatement,
                           callee: NativeFunction): Set[NativeTaintFact] = {
         val callInstr = call.instruction.asInstanceOf[Call]
@@ -217,6 +250,21 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
         }
     }
 
+    /**
+     * Each tainted parameter in the callee must also be tainted in the caller. Besides, also tainted
+     * global variables are mapped to the caller context. In case a tainted variable reached a source function
+     * via the callee, a FlowFact(flow) is created in the caller, where flow holds the call chain from the caller to
+     * the respective sink function.
+     *
+     * @param exit     The statement, which terminated the analysis of the `callee`.
+     * @param in       The fact which holds before the execution of the `exit`.
+     * @param call     The statement, which called the `callee`.
+     * @param successor The successor statement of the call, might be None if unbalanced return.
+     * @param unbCallChain The current call chain of unbalanced returns.
+     * @return The facts, which hold after the execution of `exit` in the caller's context
+     *         under the assumption that `in` held before the execution of `exit` and that
+     *         `successor` will be executed next.
+     */
     override def returnFlow(exit: LLVMStatement, in: NativeTaintFact, call: LLVMStatement,
                             successor: Option[LLVMStatement], unbCallChain: Seq[Callable]): Set[NativeTaintFact] = {
         val callee = exit.callable;
@@ -260,6 +308,22 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
     protected def createFlowFactAtCall(call: LLVMStatement, in: NativeTaintFact,
                                        unbCallChain: Seq[Callable]): Option[NativeTaintFact] = None
 
+    /**
+     * Tainted variables and array elements are only propagated if they are not passed as
+     * a pass-by-reference parameter to the callee. Otherwise, they are propagated via call flow and return
+     * flow. Tainted global variables are only propagated if the call crosses the language boundary and calls a
+     * Java method. An exception is made on external calls where the code is not available for analysis. In
+     * that case, all taint facts are propagated. If a source function is called returning a tainted value, a new
+     * FlowFact(flow) is created, where flow holds the call chain from the caller to the respective sink function.
+     *
+     * @param call The statement, which invoked the call.
+     * @param callee The function that is called.
+     * @param in The facts, which hold before the `call`.
+     * @param successor The statement after the call within the caller.
+     * @param unbCallChain The current call chain of unbalanced returns.
+     * @return The facts, which hold after the call independently of what happens in the callee
+     *         under the assumption that `in` held before `call`.
+     */
     override def callToReturnFlow(call: LLVMStatement, callee: Option[NativeFunction], in: NativeTaintFact, successor: Option[LLVMStatement], unbCallChain: Seq[Callable]): Set[NativeTaintFact] = {
         val callInstr = call.instruction.asInstanceOf[Call]
         val isXlangCall = callee.isDefined && callee.get.isInstanceOf[JNIMethod]
@@ -296,6 +360,9 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
         else result
     }
 
+    /**
+     * Handle native-to-Java unbalanced returns.
+     */
     override def outsideAnalysisContextUnbReturn(callee: NativeFunction): Option[OutsideAnalysisContextUnbReturnHandler] = {
         def handleJavaUnbalancedReturn(callee: NativeFunction, in: NativeTaintFact, callChain: Seq[Callable],
                                        dependeesGetter: Getter): Unit = {
@@ -328,6 +395,12 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
         }
     }
 
+    /**
+     * Each tainted parameter in the callee must also be tainted in the caller. In case a tainted variable
+     * reached a source function via the callee, a FlowFact(flow) is created in the caller, where flow holds
+     * the call chain from the caller to the respective sink function. In addition, tainted Java static fields
+     * are propagated to the caller. The respective native taint facts are mapped to Java taint facts.
+     */
     private def javaUnbalancedReturnFlow(callee: LLVMFunction, javaCallee: Method, call: JavaStatement, in: NativeTaintFact): Set[TaintFact] = {
         val callStatement = JavaIFDSProblem.asCall(call.stmt)
 
@@ -355,6 +428,20 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
         }
     }
 
+    /**
+     * As with the other call flow functions, pass-by-reference parameters, including this, must be
+     * tainted in the callee context if they are tainted in the caller context. If the return value is
+     * tainted in the caller context, it is only tainted in the callee context if the callee is not marked
+     * as sanitizer. In addition, tainted static fields are propagated to the callee. The respective Java
+     * taint facts are mapped to native taint facts.
+     *
+     * @param start The start statement for the analysis.
+     * @param call The analyzed call statement.
+     * @param callee The called method, for which the data flow shall be computed.
+     * @param in The fact which holds before the execution of the `call`.
+     * @return The facts, which hold after the execution of `statement` under the assumption that
+     *         the facts in `in` held before `statement` and `statement` calls `callee`.
+     */
     override protected def javaCallFlow(start: JavaStatement, call: LLVMStatement, callee: Method,
                                         in: NativeTaintFact): Set[TaintFact] = {
         val flow = collection.mutable.Set.empty[TaintFact]
@@ -434,6 +521,20 @@ abstract class NativeBackwardTaintProblem(project: SomeProject)
         flow.toSet
     }
 
+    /**
+     * Each tainted parameter in the callee must also be tainted in the caller. In case a tainted variable
+     * reached a source function via the callee, a FlowFact(flow) is created in the caller, where flow holds
+     * the call chain from the caller to the respective sink function. In addition,tainted Java static fields
+     * are propagated to the caller. The respective Java taint facts are mapped to native taint facts.
+     *
+     * @param exit the exit statement of the Java method.
+     * @param in the fact which holds at the exit statement.
+     * @param call the call instruction of the Java method in native code.
+     * @param callFact the fact which held before the call.
+     * @param unbCallChain the current callchain of unbalanced returns.
+     * @param successor the successor statement of the call in native code.
+     * @return the facts that hold after the return of the Java method to native code.
+     */
     override protected def javaReturnFlow(exit: JavaStatement, in: TaintFact, call: LLVMStatement, callFact: NativeTaintFact,
                                           unbCallChain: Seq[Callable], successor: Option[LLVMStatement]): Set[NativeTaintFact] = {
         val callee = exit.callable

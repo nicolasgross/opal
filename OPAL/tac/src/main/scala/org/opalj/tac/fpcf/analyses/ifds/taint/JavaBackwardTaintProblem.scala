@@ -12,6 +12,8 @@ import org.opalj.tac.fpcf.analyses.ifds.{JavaBackwardIFDSProblem, JavaIFDSProble
 /**
  * Implementation of a backward taint analysis for Java code.
  *
+ * @author Nicolas Gross
+ * @author others
  */
 abstract class JavaBackwardTaintProblem(project: SomeProject)
     extends JavaBackwardIFDSProblem[TaintFact](project)
@@ -22,20 +24,31 @@ abstract class JavaBackwardTaintProblem(project: SomeProject)
     override def enableUnbalancedReturns: Boolean = true
 
     /**
-     * If a tainted variable gets assigned a value, this value will be tainted.
+     * Whenever an expression is assigned to a tainted variable, static field, object field, or array
+     * element, the values in the expression must also be tainted. In case a tainted static field, object field, or
+     * array element is assigned, the respective taint fact must be removed. This is irrelevant for variables as
+     * the analysis is performed on code in SSA form, making reassignments of local variables impossible.
+     *
+     * @param statement   The analyzed statement.
+     * @param in          The fact which holds before the execution of the `statement`.
+     * @param predecessor The predecessor of the analyzed `statement`, for which the data flow shall be
+     *                    computed. Used for phi statements to distinguish the flow.
+     * @return The facts, which hold after the execution of `statement` under the assumption
+     *         that the facts in `in` held before `statement` and `successor` will be
+     *         executed next.
      */
-    override def normalFlow(jstmt: JavaStatement, in: TaintFact, predecessor: Option[JavaStatement]): Set[TaintFact] = {
-        jstmt.stmt.astID match {
+    override def normalFlow(statement: JavaStatement, in: TaintFact, predecessor: Option[JavaStatement]): Set[TaintFact] = {
+        statement.stmt.astID match {
             case Assignment.ASTID => if (in match {
-                case Variable(index)        => index == jstmt.index
-                case ArrayElement(index, _) => index == jstmt.index
+                case Variable(index)        => index == statement.index
+                case ArrayElement(index, _) => index == statement.index
                 case _                      => false
             }) {
-                createNewTaints(jstmt.stmt.asAssignment.expr, jstmt) + in
+                createNewTaints(statement.stmt.asAssignment.expr, statement) + in
             } else Set(in)
             case ArrayStore.ASTID =>
-                val arrayStore = jstmt.stmt.asArrayStore
-                val arrayIndex = TaintProblem.getIntConstant(arrayStore.index, jstmt.code)
+                val arrayStore = statement.stmt.asArrayStore
+                val arrayIndex = TaintProblem.getIntConstant(arrayStore.index, statement.code)
                 val arrayDefinedBy = arrayStore.arrayRef.asVar.definedBy
                 if (in match {
                     // check if array is tainted
@@ -47,11 +60,11 @@ abstract class JavaBackwardTaintProblem(project: SomeProject)
                     if (arrayIndex.isDefined && arrayDefinedBy.size == 1 &&
                         in == ArrayElement(arrayDefinedBy.head, arrayIndex.get)) {
                         // tainted array element is overwritten -> untaint
-                        createNewTaints(arrayStore.value, jstmt)
-                    } else createNewTaints(arrayStore.value, jstmt) + in
+                        createNewTaints(arrayStore.value, statement)
+                    } else createNewTaints(arrayStore.value, statement) + in
                 } else Set(in)
             case PutField.ASTID =>
-                val putField = jstmt.stmt.asPutField
+                val putField = statement.stmt.asPutField
                 val definedBy = putField.objRef.asVar.definedBy
                 if (in match {
                     case InstanceField(index, classType, fieldName) =>
@@ -60,23 +73,31 @@ abstract class JavaBackwardTaintProblem(project: SomeProject)
                             putField.name == fieldName
                     case _ => false
                 }) {
-                    createNewTaints(putField.value, jstmt)
+                    createNewTaints(putField.value, statement)
                 } else Set(in)
             case PutStatic.ASTID =>
-                val putStatic = jstmt.stmt.asPutStatic
+                val putStatic = statement.stmt.asPutStatic
                 in match {
                     case StaticField(classType, fieldName) if putStatic.declaringClass == classType &&
-                        putStatic.name == fieldName => createNewTaints(putStatic.value, jstmt)
+                        putStatic.name == fieldName => createNewTaints(putStatic.value, statement)
                     case _ => Set(in)
                 }
             case _ => Set(in)
         }
     }
 
+
     /**
-     * If the returned value in the caller context is tainted, the returned values in the callee
-     * context will be tainted. If an actual pass-by-reference-parameter in the caller context is
-     * tainted, the formal parameter in the callee context will be tainted.
+     * If the return value is tainted in the caller context and the callee is not marked as sanitizer,
+     * the return value must also be tainted in the callee context. Tainted pass-by-reference parameters and
+     * static fields are always propagated to the callee.
+     *
+     * @param start  The statement, which starts the analysis of the 'callee'.
+     * @param in     The fact which holds before the execution of the `call`.
+     * @param call   The statement, which called the `callee`.
+     * @param callee The called method, for which the data flow shall be computed.
+     * @return The facts, which hold after the execution of `call` under the assumption that
+     *         the fact `in` held before `call` and `call` calls `callee`.
      */
     override def callFlow(start: JavaStatement, in: TaintFact, call: JavaStatement, callee: Method): Set[TaintFact] = {
         // taint expression of return value in callee if return value in caller is tainted
@@ -131,9 +152,18 @@ abstract class JavaBackwardTaintProblem(project: SomeProject)
     }
 
     /**
-     * Taints the actual parameters in the caller context if the formal parameters in the callee
-     * context were tainted.
-     * Does not taint anything, if the sanitize method was called.
+     * Each tainted parameter and static variable in the callee must also be tainted in the caller.
+     * In case a tainted variable reached a source function via the callee, a FlowFact(flow) is created in the
+     * caller, where flow holds the call chain from the caller to the respective sink function.
+     *
+     * @param exit     The statement, which terminated the analysis of the `callee`.
+     * @param in       The fact which holds before the execution of the `exit`.
+     * @param call     The statement, which called the `callee`.
+     * @param successor The successor statement of the call, might be None if unbalanced return.
+     * @param unbCallChain The current call chain of unbalanced returns.
+     * @return The facts, which hold after the execution of `exit` in the caller's context
+     *         under the assumption that `in` held before the execution of `exit` and that
+     *         `successor` will be executed next.
      */
     override def returnFlow(exit: JavaStatement, in: TaintFact, call: JavaStatement, successor: Option[JavaStatement], unbCallChain: Seq[Callable]): Set[TaintFact] = {
         val callStatement = JavaIFDSProblem.asCall(call.stmt)
@@ -168,9 +198,20 @@ abstract class JavaBackwardTaintProblem(project: SomeProject)
     }.toSet
 
     /**
-     * Adds a FlowFact, if `createFlowFactAtCall` creates one.
-     * Removes taints according to `sanitizeParamters`.
-     * Does not propagate facts of pass-by-reference params or static fields, except callee is None.
+     * Tainted variables are always propagated. Tainted instance fields and array elements
+     * are only propagated if they are not passed as a pass-by-reference parameter to the callee. Otherwise, they
+     * are propagated via call flow and return flow. Tainted static fields are never propagated. An exception is
+     * made if the callee is outside the analysis context, meaning its code is not available. In that case, all taint
+     * facts are propagated. In case a source function is called returning a tainted value, a new FlowFact(flow)
+     * is created, where flow holds the call chain from the caller to the respective sink function.
+     *
+     * @param call The statement, which invoked the call.
+     * @param callee The function that is called.
+     * @param in The facts, which hold before the `call`.
+     * @param successor The statement after the call within the caller.
+     * @param unbCallChain The current call chain of unbalanced returns.
+     *  @return The facts, which hold after the call independently of what happens in the callee
+     *         under the assumption that `in` held before `call`.
      */
     override def callToReturnFlow(call: JavaStatement, callee: Option[Method], in: TaintFact, successor: Option[JavaStatement], unbCallChain: Seq[Callable]): Set[TaintFact] = {
         val result = collection.mutable.Set.empty[TaintFact]

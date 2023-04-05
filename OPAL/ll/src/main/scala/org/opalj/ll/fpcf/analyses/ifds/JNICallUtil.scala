@@ -3,6 +3,12 @@ package org.opalj.ll.fpcf.analyses.ifds
 
 import org.opalj.br.Method
 
+/**
+ * Utility functions for working with JNI calls.
+ *
+ * @author Marc Clement
+ * @author Nicolas Gross
+ */
 object JNICallUtil {
 
     /**

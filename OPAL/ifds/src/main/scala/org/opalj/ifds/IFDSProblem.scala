@@ -71,10 +71,10 @@ abstract class IFDSProblem[Fact <: AbstractIFDSFact, C <: AnyRef, S <: Statement
      * Computes the data flow for a call to start edge. The start node depends on the analysis
      * direction (forward: entry of callee, backward: an exit/return statement).
      *
-     * @param call   The statement, which called the `callee`.
-     * @param in     The fact which holds before the execution of the `call`.
-     * @param callee The called method, for which the data flow shall be computed.
      * @param start  The statement, which starts the analysis of the 'callee'.
+     * @param in     The fact which holds before the execution of the `call`.
+     * @param call   The statement, which called the `callee`.
+     * @param callee The called method, for which the data flow shall be computed.
      * @return The facts, which hold after the execution of `call` under the assumption that
      *         the fact `in` held before `call` and `call` calls `callee`.
      */
